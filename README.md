@@ -5,16 +5,16 @@
 
 *Disciplina, estratégia e dados aplicados à engenharia civil.*
 
-> Projeto de Ciência de Dados e Analytics Engineering aplicado à construção civil, focado em antecipação de riscos, redução de atrasos e suporte à decisão executiva, com entrega em formato de produto de dados.
+> Plataforma analítica que antecipa riscos operacionais em obras civis,
+convertendo dados históricos em alertas preventivos e reduzindo
+exposição a multas contratuais.
 
 
 ---
 
 ⚠️ **Disclaimer**
 
-Todos os dados, nomes de empresas e cenários apresentados neste projeto são fictícios, criados exclusivamente para fins acadêmicos e de portfólio.
-
-Este projeto não possui vínculo com nenhuma empresa real de engenharia e não utiliza dados confidenciais.
+> Projeto desenvolvido com dados sintéticos gerados a partir de hipóteses realistas do setor de construção civil, aplicando metodologia e stack equivalentes a ambientes produtivos.
 
 
 
