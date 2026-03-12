@@ -1,5 +1,11 @@
 # 🏗️ Predição de Risco de Atraso em Obras
 
+> Plataforma de Análise de Inteligência Operacional — CCbjj Engenharia & Inteligência de Riscos
+
+> Disciplina, estratégia e dados aplicados à engenharia civil.
+
+
+
 Plataforma analítica que antecipa riscos operacionais em obras civis, convertendo dados históricos em alertas preventivos e reduzindo exposição a multas contratuais.
 
 > Projeto desenvolvido com dados sintéticos gerados a partir de hipóteses realistas do setor de construção civil, aplicando metodologia e stack equivalentes a ambientes produtivos reais.
