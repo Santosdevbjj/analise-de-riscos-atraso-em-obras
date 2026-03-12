@@ -224,6 +224,11 @@ A entrega mais valorizada não foi o modelo. Foi o bot e o simulador — porque 
 **Sergio Santos**
 Cientista de Dados | Ambientes Críticos e Governança de Dados
 
-📧 santossergiorealbjj@outlook.com
-🔗 [LinkedIn](https://www.linkedin.com/in/santossergioluiz)
-🌐 [Portfólio](https://portfoliosantossergio.vercel.app)
+---
+**Contato:**
+
+[![Portfólio Sérgio Santos](https://img.shields.io/badge/Portfólio-Sérgio_Santos-111827?style=for-the-badge&logo=githubpages&logoColor=00eaff)](https://portfoliosantossergio.vercel.app)
+
+[![LinkedIn Sérgio Santos](https://img.shields.io/badge/LinkedIn-Sérgio_Santos-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white)](https://linkedin.com/in/santossergioluiz)
+
+---
