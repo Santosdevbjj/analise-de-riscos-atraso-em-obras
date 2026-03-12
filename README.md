@@ -5,6 +5,8 @@
 > Disciplina, estratégia e dados aplicados à engenharia civil.
 
 
+Um projeto de Engenharia de Ciência de Dados & Analytics aplicado à indústria da construção, focado na antecipação de riscos, redução de atrasos e suporte à tomada de decisão executiva, entregue como um produto de dados, não apenas como um modelo.
+
 
 Plataforma analítica que antecipa riscos operacionais em obras civis, convertendo dados históricos em alertas preventivos e reduzindo exposição a multas contratuais.
 
