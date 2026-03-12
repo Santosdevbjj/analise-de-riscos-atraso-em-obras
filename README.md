@@ -2,10 +2,11 @@
 
 ### CCbjj Engenharia & Inteligência de Riscos — Plataforma de Análise Operacional
 
-[![Portfólio Sérgio Santos](https://img.shields.io/badge/Portfólio-Sérgio_Santos-111827?style=for-the-badge&logo=githubpages&logoColor=00eaff)](https://portfoliosantossergio.vercel.app)
-[![LinkedIn Sérgio Santos](https://img.shields.io/badge/LinkedIn-Sérgio_Santos-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white)](https://linkedin.com/in/santossergioluiz)
+
 [![Streamlit App](https://img.shields.io/badge/Simulador-Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://LINK_STREAMLIT_AQUI)
-[![Telegram Bot](https://img.shields.io/badge/Bot-Telegram-26A5E4?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/LINK_BOT_AQUI)
+
+[![Telegram Bot](https://img.shields.io/badge/Bot-Telegram-26A5E4?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/CCbjj_risk_bot)
+
 
 > *Disciplina, estratégia e dados aplicados à engenharia civil.*
 
