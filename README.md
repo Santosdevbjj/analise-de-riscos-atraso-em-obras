@@ -1,5 +1,10 @@
 # 🏗️ Predição de Risco de Atraso em Obras
 
+<p align="center">
+  <img src="assets/CCbjj-predicao-riscos.png" alt="Predição de Risco de Atraso em Obras" width="600"/>
+</p>
+
+
 ### CCbjj Engenharia & Inteligência de Riscos — Plataforma de Análise Operacional
 
  
