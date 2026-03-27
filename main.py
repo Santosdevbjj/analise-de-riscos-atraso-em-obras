@@ -4,9 +4,10 @@ import urllib.parse
 from fastapi import FastAPI, Request
 from telegram import Update
 from telegram.ext import Application
-from sqlalchemy import create_engine, Column, BigInteger, String, Text
+from sqlalchemy import create_engine, Column, BigInteger, String, Text, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.sql import func
 
 # 1. Configurações de Log para o Render
 logging.basicConfig(
@@ -23,6 +24,9 @@ RAW_DB_URL = os.environ.get("DATABASE_URL")
 # 3. TRATAMENTO AUTOMÁTICO DA URL E SENHA
 def get_sanitized_engine(url):
     try:
+        if not url:
+            raise ValueError("DATABASE_URL não encontrada!")
+            
         # Separa os componentes da URL para tratar a senha isoladamente
         result = urllib.parse.urlparse(url)
         username = result.username
@@ -41,17 +45,18 @@ def get_sanitized_engine(url):
                 "ssl_context": True,
                 "timeout": 30
             },
-            pool_pre_ping=True # Testa a conexão antes de usar
+            pool_pre_ping=True
         )
     except Exception as e:
         logger.error(f"Erro ao processar DATABASE_URL: {e}")
-        return create_engine(url) # Fallback para a URL original
+        # Fallback para a URL original caso falhe o parse
+        return create_engine(url)
 
 engine = get_sanitized_engine(RAW_DB_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# 4. Modelo do Banco de Dados
+# 4. Modelo do Banco de Dados Atualizado
 class RegistroObra(Base):
     __tablename__ = "registros_obras"
     id = Column(BigInteger, primary_key=True, index=True)
@@ -59,6 +64,8 @@ class RegistroObra(Base):
     usuario = Column(String(255))
     descricao = Column(Text)
     status = Column(String(50), default="Pendente")
+    # Nova coluna de data de criação automática
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 # Cria a tabela se ela não existir
 try:
@@ -74,7 +81,6 @@ ptb_app = Application.builder().token(TOKEN).build()
 @app.on_event("startup")
 async def setup_webhook():
     if WEBHOOK_URL:
-        # Garante que a URL do webhook esteja correta
         url = f"{WEBHOOK_URL.rstrip('/')}/webhook"
         await ptb_app.bot.set_webhook(url=url)
         logger.info(f"Webhook configurado para: {url}")
