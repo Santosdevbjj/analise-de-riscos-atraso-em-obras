@@ -5,7 +5,7 @@ setuptools==82.0.1
 # --- FastAPI ---
 fastapi==0.135.2
 uvicorn==0.42.0
-python-multipart==0.0.9
+python-multipart==0.0.22
 
 # Telegram Bot
 python-telegram-bot==22.7
