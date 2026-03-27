@@ -3,127 +3,113 @@ import logging
 import urllib.parse
 from fastapi import FastAPI, Request
 from telegram import Update
-from telegram.ext import Application
-from sqlalchemy import create_engine, Column, BigInteger, String, Text, DateTime
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from telegram.ext import Application, CommandHandler, ContextTypes
+from sqlalchemy import create_engine, Column, BigInteger, String, Text, DateTime, text
+from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.sql import func
 
-# 1. Configurações de Log para o Render
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', 
-    level=logging.INFO
-)
+# 1. Logging e Configurações
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# 2. Variáveis de Ambiente
 TOKEN = os.environ.get("TELEGRAM_TOKEN")
-WEBHOOK_URL = os.environ.get("WEBHOOK_URL")
 RAW_DB_URL = os.environ.get("DATABASE_URL")
 
-# 3. TRATAMENTO AUTOMÁTICO DA URL E SENHA
+# 2. Tratamento Robusto de Conexão (Segurança do Arquivo Antigo)
 def get_sanitized_engine(url):
     try:
-        if not url:
-            raise ValueError("DATABASE_URL não encontrada!")
-            
-        # Separa os componentes da URL para tratar a senha isoladamente
-        result = urllib.parse.urlparse(url)
-        username = result.username
-        password = urllib.parse.quote_plus(result.password) if result.password else ""
-        hostname = result.hostname
-        port = result.port
-        database = result.path.lstrip('/')
+        if not url: raise ValueError("DATABASE_URL ausente!")
+        if "postgresql+pg8000" not in url:
+            result = urllib.parse.urlparse(url)
+            password = urllib.parse.quote_plus(result.password) if result.password else ""
+            url = f"postgresql+pg8000://{result.username}:{password}@{result.hostname}:{result.port}{result.path}"
         
-        # Reconstrói a URL de forma segura para o SQLAlchemy
-        safe_url = f"postgresql+pg8000://{username}:{password}@{hostname}:{port}/{database}"
-        
-        # Cria o engine com suporte a SSL (obrigatório Supabase) e timeout
-        return create_engine(
-            safe_url,
-            connect_args={
-                "ssl_context": True,
-                "timeout": 30
-            },
-            pool_pre_ping=True
-        )
+        return create_engine(url, connect_args={"ssl_context": True, "timeout": 30}, pool_pre_ping=True)
     except Exception as e:
-        logger.error(f"Erro ao processar DATABASE_URL: {e}")
-        # Fallback para a URL original caso falhe o parse
-        return create_engine(url)
+        logger.error(f"Erro no Engine: {e}")
+        return create_engine(url.replace("postgres://", "postgresql://"))
 
 engine = get_sanitized_engine(RAW_DB_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# 4. Modelo do Banco de Dados Atualizado
+# 3. Modelo de Log (Mantendo o histórico de uso do Bot)
 class RegistroObra(Base):
     __tablename__ = "registros_obras"
-    id = Column(BigInteger, primary_key=True, index=True)
+    id = Column(BigInteger, primary_key=True)
     telegram_id = Column(BigInteger)
     usuario = Column(String(255))
     descricao = Column(Text)
-    status = Column(String(50), default="Pendente")
-    # Nova coluna de data de criação automática
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-# Cria a tabela se ela não existir
-try:
-    Base.metadata.create_all(bind=engine)
-    logger.info("Tabelas verificadas/criadas com sucesso no Supabase.")
-except Exception as e:
-    logger.error(f"Erro ao criar tabelas: {e}")
+Base.metadata.create_all(bind=engine)
 
-# 5. Inicialização do FastAPI e Bot
-app = FastAPI()
-ptb_app = Application.builder().token(TOKEN).build()
+# 4. Funções de Inteligência de Dados
+def buscar_analise_preditiva(id_obra: str):
+    query = text('SELECT * FROM view_analise_preditiva WHERE id_obra = :id LIMIT 1')
+    with engine.connect() as conn:
+        return conn.execute(query, {"id": id_obra}).fetchone()
 
-@app.on_event("startup")
-async def setup_webhook():
-    if WEBHOOK_URL:
-        url = f"{WEBHOOK_URL.rstrip('/')}/webhook"
-        await ptb_app.bot.set_webhook(url=url)
-        logger.info(f"Webhook configurado para: {url}")
+# 5. Handlers do Telegram
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg = (
+        f"Olá {update.effective_user.first_name}! 🏗️\n"
+        "Sistema de Inteligência CCBJJ (300k registros) Ativo.\n\n"
+        "Comandos:\n"
+        "1️⃣ `/analise [ID]` - Ex: `/analise CCBJJ-100` (Predição de risco)\n"
+        "2️⃣ `/obra [txt]` - Registrar nota rápida no banco"
+    )
+    await update.message.reply_text(msg, parse_mode="Markdown")
+
+async def analise_preditiva(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not context.args:
+        await update.message.reply_text("Informe o ID. Ex: `/analise CCBJJ-100`")
+        return
+
+    id_obra = context.args[0].upper()
+    res = buscar_analise_preditiva(id_obra)
+
+    if res:
+        status_cor = "🔴 CRÍTICO" if res.risco_etapa > 7 else "🟢 OK"
+        relatorio = (
+            f"📊 *DATA INSIGHT: {res.id_obra}*\n"
+            f"📍 {res.cidade.title()} | Etapa: {res.etapa}\n"
+            f"----------------------------\n"
+            f"🌡️ *Risco Predito:* `{res.risco_etapa:.1f} dias` ({status_cor})\n"
+            f"💰 Orçamento: R$ {res.orcamento_estimado:,.2f}\n"
+            f"👷 Equipe: {res.qtd_engenheiros} Eng / {res.qtd_pedreiros} Ped\n"
+            f"📉 Taxa Insucesso Forn: {res.taxa_insucesso_fornecedor:.1%}"
+        )
+        await update.message.reply_text(relatorio, parse_mode="Markdown")
     else:
-        logger.warning("WEBHOOK_URL não configurada no painel do Render.")
+        await update.message.reply_text(f"❌ ID `{id_obra}` não localizado.")
+
+async def registrar_nota(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    desc = " ".join(context.args)
+    if not desc:
+        await update.message.reply_text("Digite a descrição. Ex: `/obra Verificar cimento`")
+        return
+    
+    with SessionLocal() as db:
+        db.add(RegistroObra(telegram_id=update.effective_user.id, usuario=update.effective_user.first_name, descricao=desc))
+        db.commit()
+    await update.message.reply_text("✅ Nota registrada nos logs do sistema.")
+
+# 6. FastAPI Webhook Setup
+app = FastAPI()
+ptb = Application.builder().token(TOKEN).build()
+ptb.add_handler(CommandHandler("start", start))
+ptb.add_handler(CommandHandler("analise", analise_preditiva))
+ptb.add_handler(CommandHandler("obra", registrar_nota))
 
 @app.post("/webhook")
 async def handle_webhook(request: Request):
-    try:
-        data = await request.json()
-        update = Update.de_json(data, ptb_app.bot)
-
-        if update.message and update.message.text:
-            text = update.message.text
-            user = update.message.from_user
-
-            if text == "/start":
-                await update.message.reply_text(
-                    f"Olá {user.first_name}! 🏗️\nEstou pronto para analisar riscos de atraso.\n\n"
-                    "Use o comando: `/obra [descrição da obra]`"
-                )
-
-            elif text.startswith("/obra"):
-                desc = text.replace("/obra", "").strip()
-                if desc:
-                    # Persistência no Banco de Dados
-                    with SessionLocal() as db:
-                        nova_obra = RegistroObra(
-                            telegram_id=user.id,
-                            usuario=user.first_name,
-                            descricao=desc
-                        )
-                        db.add(nova_obra)
-                        db.commit()
-                    await update.message.reply_text("✅ Obra registrada no banco do Supabase para análise!")
-                else:
-                    await update.message.reply_text("⚠️ Por favor, informe a descrição da obra após o comando.")
-
-        return {"status": "ok"}
-    except Exception as e:
-        logger.error(f"Erro no processamento do webhook: {e}")
-        return {"status": "error"}
+    data = await request.json()
+    async with ptb:
+        update = Update.de_json(data, ptb.bot)
+        await ptb.process_update(update)
+    return {"status": "ok"}
 
 @app.get("/")
-def health():
-    return {"status": "online", "database": "connected"}
+async def health():
+    return {"status": "online", "engine": "hybrid_active"}
