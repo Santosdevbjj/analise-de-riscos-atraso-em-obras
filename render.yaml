@@ -1,19 +1,15 @@
 services:
   - type: web
-    name: fastapi-app-2026
+    name: fastapi-supabase-2026
     runtime: python
-    plan: free
-    region: ohio # Ou a região de sua preferência
-    
-    # NOVAS CONFIGURAÇÕES DE 2026:
-    # Usando 'uv sync' para instalações quase instantâneas
-    buildCommand: uv sync
-    
-    # Comando de inicialização padrão para FastAPI
+    plan: free # Ou o plano de sua escolha
+    buildCommand: uv sync && uv pip install supabase  # Usando o instalador do uv
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     
     envVars:
       - key: PYTHON_VERSION
         value: 3.14.3
-      - key: UV_VERSION
-        value: 0.10.2
+      - key: SUPABASE_URL
+        sync: false # Você preenche o valor manualmente no painel do Render por segurança
+      - key: SUPABASE_KEY
+        sync: false
