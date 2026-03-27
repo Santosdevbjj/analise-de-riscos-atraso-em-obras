@@ -11,7 +11,7 @@ python-multipart==0.0.22
 python-telegram-bot==22.7
 
 # --- Banco de dados e ORM ---
-sqlalchemy>=2.0.29   # corrigido para suportar Python 3.13
+sqlalchemy>=2.0.48   # corrigido para suportar Python 3.13
 pg8000==1.30.2
 alembic==1.13.1
 psycopg2-binary==2.9.9   # opcional, útil em migrações
