@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: fastapi-app-2026
+    runtime: python
+    plan: free
+    region: ohio # Ou a região de sua preferência
+    
+    # NOVAS CONFIGURAÇÕES DE 2026:
+    # Usando 'uv sync' para instalações quase instantâneas
+    buildCommand: uv sync
+    
+    # Comando de inicialização padrão para FastAPI
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.14.3
+      - key: UV_VERSION
+        value: 0.10.2
