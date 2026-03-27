@@ -1,5 +1,5 @@
 # --- Build Tools ---
-wheel==0.45.1
+wheel==0.46.13
 setuptools==75.6.0
 
 # --- FastAPI ---
