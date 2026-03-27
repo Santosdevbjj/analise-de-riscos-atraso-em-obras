@@ -1,15 +1,14 @@
 services:
   - type: web
-    name: fastapi-supabase-2026
+    name: telegram-supabase-bot
     runtime: python
-    plan: free # Ou o plano de sua escolha
-    buildCommand: uv sync && uv pip install supabase  # Usando o instalador do uv
+    plan: free
+    buildCommand: uv sync && uv pip install python-telegram-bot  # Biblioteca líder em 2026
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
-    
     envVars:
       - key: PYTHON_VERSION
         value: 3.14.3
-      - key: SUPABASE_URL
-        sync: false # Você preenche o valor manualmente no painel do Render por segurança
-      - key: SUPABASE_KEY
-        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false # Defina o Token do @BotFather no painel do Render
+      - key: WEBHOOK_URL
+        sync: false # Será https://seu-app.onrender.com/webhook
