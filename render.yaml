@@ -3,12 +3,28 @@ services:
     name: telegram-supabase-bot
     runtime: python
     plan: free
-    buildCommand: uv sync && uv pip install python-telegram-bot  # Biblioteca líder em 2026
+    region: ohio # Altere se preferir outra região
+    
+    # NOVAS CONFIGURAÇÕES DE 2026:
+    # Usando 'uv' para instalar as dependências necessárias para Telegram + Postgres
+    buildCommand: uv sync && uv pip install python-telegram-bot sqlalchemy pg8000 fastapi uvicorn
+    
+    # Comando de inicialização garantindo o host e a porta do Render
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    
     envVars:
       - key: PYTHON_VERSION
         value: 3.14.3
-      - key: TELEGRAM_BOT_TOKEN
-        sync: false # Defina o Token do @BotFather no painel do Render
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: DEFAULT_STORAGE_MODE
+        value: SUPABASE
+      
+      # Estas variáveis você já preencheu no painel, 
+      # mantemos aqui como referência para o Render não sobrescrever com vazio.
+      - key: TELEGRAM_TOKEN
+        sync: false 
+      - key: DATABASE_URL
+        sync: false
       - key: WEBHOOK_URL
-        sync: false # Será https://seu-app.onrender.com/webhook
+        sync: false
