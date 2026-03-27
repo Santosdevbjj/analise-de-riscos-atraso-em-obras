@@ -1,33 +1,47 @@
 import os
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Request
+from telegram import Update, Bot
+from telegram.ext import Application, CommandHandler, ContextTypes
 from supabase import create_client, Client
 
-# Carregando as credenciais das variáveis de ambiente do Render
-url: str = os.environ.get("SUPABASE_URL")
-key: str = os.environ.get("SUPABASE_KEY")
+# Configurações
+TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 
-# Inicializa o cliente do Supabase
-supabase: Client = create_client(url, key)
+# Inicialização
+app = FastAPI()
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+# Em 2026, usamos a Application do python-telegram-bot de forma assíncrona
+ptb_app = Application.builder().token(TOKEN).build()
 
-app = FastAPI(title="FastAPI + Supabase 2026")
+@app.on_event("startup")
+async def on_startup():
+    # Configura o Webhook no Telegram assim que o Render sobe o app
+    webhook_url = os.environ.get("WEBHOOK_URL")
+    await ptb_app.bot.set_webhook(url=f"{webhook_url}/webhook")
 
-@app.get("/")
-async def root():
-    return {"message": "Conectado ao Supabase via Render", "runtime": "Python 3.14.3"}
-
-@app.get("/dados")
-async def get_dados():
-    # Exemplo de consulta em uma tabela chamada 'profiles'
-    response = supabase.table("profiles").select("*").execute()
+@app.post("/webhook")
+async def telegram_webhook(request: Request):
+    """Rota que recebe as mensagens do Telegram"""
+    data = await request.json()
+    update = Update.de_json(data, ptb_app.bot)
     
-    # O SDK do Supabase em 2026 retorna um objeto com .data
-    if hasattr(response, 'error') and response.error:
-        raise HTTPException(status_code=400, detail=str(response.error))
+    # Processa o comando /start
+    if update.message and update.message.text == "/start":
+        user = update.message.from_user
         
-    return {"data": response.data}
+        # 2026 Style: Salva o novo usuário no Supabase automaticamente
+        supabase.table("users").upsert({
+            "id": user.id, 
+            "username": user.username,
+            "last_seen": "now()"
+        }).execute()
 
-@app.post("/cadastrar")
-async def cadastrar_usuario(nome: str, email: str):
-    data = {"username": nome, "email": email}
-    response = supabase.table("profiles").insert(data).execute()
-    return {"status": "sucesso", "result": response.data}
+        await update.message.reply_text(f"Olá {user.first_name}! Seu perfil foi atualizado no Supabase e estou rodando no Render 2026.")
+    
+    return {"status": "ok"}
+
+@app.get("/health")
+def health():
+    return {"status": "alive"}
