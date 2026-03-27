@@ -1,47 +1,63 @@
 import os
 from fastapi import FastAPI, Request
-from telegram import Update, Bot
-from telegram.ext import Application, CommandHandler, ContextTypes
+from telegram import Update
+from telegram.ext import Application
 from supabase import create_client, Client
 
-# Configurações
+# Configurações do Ambiente Render 2026
 TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+WEBHOOK_URL = "https://analiseriscosatrasoobras.onrender.com"
 
-# Inicialização
 app = FastAPI()
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-# Em 2026, usamos a Application do python-telegram-bot de forma assíncrona
 ptb_app = Application.builder().token(TOKEN).build()
 
 @app.on_event("startup")
-async def on_startup():
-    # Configura o Webhook no Telegram assim que o Render sobe o app
-    webhook_url = os.environ.get("WEBHOOK_URL")
-    await ptb_app.bot.set_webhook(url=f"{webhook_url}/webhook")
+async def setup_webhook():
+    # Garante que o Telegram sabe para onde enviar as mensagens
+    await ptb_app.bot.set_webhook(url=f"{WEBHOOK_URL}/webhook")
 
 @app.post("/webhook")
-async def telegram_webhook(request: Request):
-    """Rota que recebe as mensagens do Telegram"""
+async def handle_webhook(request: Request):
     data = await request.json()
     update = Update.de_json(data, ptb_app.bot)
-    
-    # Processa o comando /start
-    if update.message and update.message.text == "/start":
-        user = update.message.from_user
-        
-        # 2026 Style: Salva o novo usuário no Supabase automaticamente
-        supabase.table("users").upsert({
-            "id": user.id, 
-            "username": user.username,
-            "last_seen": "now()"
-        }).execute()
 
-        await update.message.reply_text(f"Olá {user.first_name}! Seu perfil foi atualizado no Supabase e estou rodando no Render 2026.")
-    
-    return {"status": "ok"}
+    if update.message and update.message.text:
+        text = update.message.text
+        user_id = update.message.from_user.id
+        user_name = update.message.from_user.first_name
 
-@app.get("/health")
-def health():
-    return {"status": "alive"}
+        # Lógica: Se a mensagem começar com /obra, salvamos no Supabase
+        if text.startswith("/obra"):
+            descricao_obra = text.replace("/obra", "").strip()
+            
+            # Salvando no Supabase (Tabela: registros_obras)
+            try:
+                supabase.table("registros_obras").insert({
+                    "telegram_id": user_id,
+                    "usuario": user_name,
+                    "descricao": descricao_obra,
+                    "status_analise": "Pendente"
+                }).execute()
+                
+                await update.message.reply_text(
+                    f"✅ Obra registrada, {user_name}!\n"
+                    "Nossa IA está analisando os riscos de atraso agora."
+                )
+            except Exception as e:
+                await update.message.reply_text("❌ Erro ao salvar no banco de dados.")
+
+        elif text == "/start":
+            await update.message.reply_text(
+                "🏗️ **Bem-vindo ao Analisador de Riscos de Obras 2026**\n\n"
+                "Use `/obra [nome ou descrição]` para registrar um novo projeto para análise."
+            )
+
+    return {"status": "processed"}
+
+# Rota de Health Check para o Render
+@app.get("/")
+def home():
+    return {"status": "Online", "service": "Analisador de Obras"}
