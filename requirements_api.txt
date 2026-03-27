@@ -28,7 +28,7 @@ seaborn>=0.13.2
 plotly>=6.6.0
 
 # Geração de PDFs
-reportlab==4.0.7
+reportlab==4.4.10
 
 # Utilitários
 pytz==2023.3.post1
