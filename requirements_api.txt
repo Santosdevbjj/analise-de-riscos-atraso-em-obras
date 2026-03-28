@@ -11,10 +11,10 @@ python-multipart==0.0.22
 python-telegram-bot==22.7
 
 # --- Banco de dados e ORM ---
-sqlalchemy>=2.0.48   # corrigido para suportar Python 3.14
+sqlalchemy>=2.0.48
 pg8000==1.31.5
 alembic==1.18.4
-psycopg==3.3.3   # opcional, útil em migrações
+psycopg[binary]==3.3.3  
 
 # --- Ciência de Dados / ML ---
 pandas==3.0.0
