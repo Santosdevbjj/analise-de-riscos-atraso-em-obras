@@ -6,30 +6,28 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters
 from scripts.telegram_bot import processar_analise
 
-# Configuração de Logs
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Variáveis de Ambiente Críticas
+# [span_11](start_span)[span_12](start_span)Variáveis de Ambiente[span_11](end_span)[span_12](end_span)
 TOKEN = os.getenv("TELEGRAM_TOKEN")
-RENDER_URL = os.getenv("RENDER_URL") # Ex: https://seu-bot.onrender.com
+RENDER_URL = "https://analiseriscosatrasoobras.onrender.com"
 
-# Inicialização do Bot
 app = FastAPI()
 tg_app = Application.builder().token(TOKEN).build()
 
-# Handlers
+# Handlers de Comandos
 async def start(update: Update, context):
-    await update.message.reply_text("🏗️ Bot CCBJJ Ativo. Envie o ID da obra para análise.")
+    await update.message.reply_text("🏗️ *CCBJJ Bot Online*\nEnvie o ID da obra (ex: CCBJJ-123).")
 
-async def handle_id(update: Update, context):
-    id_obra = update.message.text.strip().upper()
+async def handle_message(update: Update, context):
+    id_obra = update.message.text.strip()
     await processar_analise(update, context, id_obra)
 
 tg_app.add_handler(CommandHandler("start", start))
-tg_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_id))
+tg_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-# Endpoint do Webhook
+# [span_13](start_span)[span_14](start_span)Rota de Webhook (Recebe dados do Telegram)[span_13](end_span)[span_14](end_span)
 @app.post("/webhook")
 async def webhook_handler(request: Request):
     data = await request.json()
@@ -37,21 +35,20 @@ async def webhook_handler(request: Request):
     await tg_app.process_update(update)
     return {"status": "ok"}
 
-# Ciclo de Vida do Webhook no Render
+# [span_15](start_span)[span_16](start_span)Inicialização Automática do Webhook[span_15](end_span)[span_16](end_span)
 @app.on_event("startup")
 async def startup_event():
     await tg_app.initialize()
     await tg_app.start()
-    # [span_7](start_span)Define a URL do Webhook no Telegram automaticamente[span_7](end_span)
     webhook_url = f"{RENDER_URL}/webhook"
     await tg_app.bot.set_webhook(url=webhook_url, drop_pending_updates=True)
-    logger.info(f"🚀 Webhook configurado: {webhook_url}")
+    logger.info(f"🚀 Bot em modo Webhook na URL: {webhook_url}")
 
 @app.on_event("shutdown")
 async def shutdown_event():
     await tg_app.stop()
     await tg_app.shutdown()
 
-@app.get("/health")
+@app.get("/")
 async def health():
-    return {"status": "online", "mode": "webhook_ipv4_2026"}
+    return {"status": "online", "system": "CCBJJ-IA-2026"}
