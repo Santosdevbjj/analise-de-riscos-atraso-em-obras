@@ -3,8 +3,21 @@ import logging
 import asyncio
 import threading
 import urllib.parse
+import io
+import pytz
+from datetime import datetime
+
+# Bibliotecas para Gráficos e PDF
+import matplotlib
+matplotlib.use("Agg") # Necessário para rodar em servidores sem monitor
+import matplotlib.pyplot as plt
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+from reportlab.lib.units import cm
+from reportlab.lib.utils import ImageReader
+
 from fastapi import FastAPI
-from telegram import Update
+from telegram import Update, InputFile
 from telegram.ext import Application, CommandHandler, ContextTypes
 from sqlalchemy import create_engine, Column, BigInteger, String, Text, DateTime, text
 from sqlalchemy.orm import sessionmaker, declarative_base
@@ -16,33 +29,21 @@ logger = logging.getLogger(__name__)
 
 TOKEN = os.environ.get("TELEGRAM_TOKEN")
 RAW_DB_URL = os.environ.get("DATABASE_URL")
+BR_TIMEZONE = pytz.timezone('America/Sao_Paulo')
 
-# 2. Tratamento de Conexão com Supabase (Corrigido para pg8000)
+# 2. Tratamento de Conexão com Supabase (Driver pg8000)
 def get_sanitized_engine(url):
     try:
         if not url: raise ValueError("DATABASE_URL ausente!")
-        # Se a URL vier do Supabase (postgres://), ajustamos para o driver pg8000
         if "postgresql+pg8000" not in url:
-            # Remove o prefixo antigo se existir
             url = url.replace("postgres://", "postgresql://")
             result = urllib.parse.urlparse(url)
-            username = result.username
             password = urllib.parse.quote_plus(result.password) if result.password else ""
-            hostname = result.hostname
-            port = result.port or 5432
-            database = result.path.lstrip('/')
-            
-            url = f"postgresql+pg8000://{username}:{password}@{hostname}:{port}/{database}"
+            url = f"postgresql+pg8000://{result.username}:{password}@{result.hostname}:{result.port or 5432}{result.path}"
         
-        return create_engine(
-            url, 
-            connect_args={"ssl_context": True}, 
-            pool_pre_ping=True,
-            pool_recycle=300
-        )
+        return create_engine(url, connect_args={"ssl_context": True}, pool_pre_ping=True)
     except Exception as e:
-        logger.error(f"Erro ao configurar Engine: {e}")
-        # Fallback simples caso o sanitize falhe
+        logger.error(f"Erro no Engine: {e}")
         return create_engine(url.replace("postgres://", "postgresql://"))
 
 engine = get_sanitized_engine(RAW_DB_URL)
@@ -58,102 +59,96 @@ class RegistroObra(Base):
     descricao = Column(Text)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-# Cria a tabela se não existir
 Base.metadata.create_all(bind=engine)
 
-# 4. Funções de Dados
-def buscar_analise_preditiva(id_obra: str):
-    query = text('SELECT * FROM view_analise_preditiva WHERE id_obra = :id LIMIT 1')
-    try:
-        with engine.connect() as conn:
-            result = conn.execute(query, {"id": id_obra}).fetchone()
-            return result
-    except Exception as e:
-        logger.error(f"Erro na query: {e}")
-        return None
+# 4. Geradores de Mídia (Integrado do telegram_bot.py)
+def gerar_grafico(risco_valor, id_obra):
+    plt.style.use('ggplot')
+    fig, ax = plt.subplots(figsize=(8, 4))
+    cor = 'green' if risco_valor <= 7 else 'orange' if risco_valor <= 10 else 'red'
+    ax.barh(['Risco Estimado'], [risco_valor], color=cor)
+    ax.set_xlim(0, 15)
+    ax.set_title(f"Análise de Risco: {id_obra}")
+    
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png', bbox_inches='tight')
+    buf.seek(0)
+    plt.close(fig)
+    return buf
+
+def gerar_pdf(id_obra, risco, status, graf_buf):
+    pdf_buf = io.BytesIO()
+    c = canvas.Canvas(pdf_buf, pagesize=A4)
+    width, height = A4
+    now = datetime.now(BR_TIMEZONE).strftime('%d/%m/%Y %H:%M')
+
+    c.setFont("Helvetica-Bold", 16)
+    c.drawCentredString(width/2, height - 3*cm, "RELATÓRIO TÉCNICO CCBJJ ENGENHARIA")
+    c.setFont("Helvetica", 12)
+    c.drawString(2*cm, height - 5*cm, f"ID da Obra: {id_obra}")
+    c.drawString(2*cm, height - 5.6*cm, f"Data da Análise: {now}")
+    c.drawString(2*cm, height - 6.2*cm, f"Status: {status}")
+    c.drawString(2*cm, height - 6.8*cm, f"Impacto Predito: {risco:.1f} dias")
+    
+    graf_buf.seek(0)
+    img = ImageReader(graf_buf)
+    c.drawImage(img, 2*cm, height - 15*cm, width=17*cm, preserveAspectRatio=True)
+    
+    c.showPage()
+    c.save()
+    pdf_buf.seek(0)
+    return pdf_buf
 
 # 5. Handlers do Telegram
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg = (
-        f"Olá {update.effective_user.first_name}! 🏗️\n"
-        "Sistema de Inteligência CCBJJ Conectado ao Supabase.\n\n"
-        "Comandos:\n"
-        "1️⃣ `/analise [ID]` - Ex: `/analise CCBJJ-100`\n"
-        "2️⃣ `/obra [texto]` - Registrar nota no banco"
-    )
-    await update.message.reply_text(msg, parse_mode="Markdown")
+    await update.message.reply_text("🏗️ **CCBJJ Intelligence Ativo**\nUse `/analise [ID]` para relatórios completos.")
 
 async def analise_preditiva(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
-        await update.message.reply_text("Informe o ID. Ex: `/analise CCBJJ-100`")
+        await update.message.reply_text("Informe o ID da obra.")
         return
 
     id_obra = context.args[0].upper()
-    res = buscar_analise_preditiva(id_obra)
+    query = text('SELECT * FROM view_analise_preditiva WHERE id_obra = :id LIMIT 1')
+    
+    with engine.connect() as conn:
+        res = conn.execute(query, {"id": id_obra}).fetchone()
 
     if res:
-        # Ajuste os nomes das colunas conforme sua View no Supabase
         risco = getattr(res, 'risco_etapa', 0)
-        status_cor = "🔴 CRÍTICO" if risco > 7 else "🟢 OK"
+        status = "🟢 OK" if risco <= 7 else "🟡 ALERTA" if risco <= 10 else "🔴 CRÍTICO"
         
-        relatorio = (
-            f"📊 *DATA INSIGHT: {id_obra}*\n"
-            f"📍 {getattr(res, 'cidade', 'N/A').title()} | Etapa: {getattr(res, 'etapa', 'N/A')}\n"
-            f"----------------------------\n"
-            f"🌡️ *Risco Predito:* `{risco:.1f} dias` ({status_cor})\n"
-            f"💰 Orçamento: R$ {getattr(res, 'orcamento_estimado', 0):,.2f}\n"
-            f"📉 Taxa Insucesso Forn: {getattr(res, 'taxa_insucesso_fornecedor', 0):.1%}"
+        # Enviar Texto
+        await update.message.reply_text(f"📊 Análise iniciada para {id_obra}...")
+        
+        # Gerar e Enviar Gráfico
+        graf = gerar_grafico(risco, id_obra)
+        await update.message.reply_photo(photo=graf, caption=f"Status: {status}")
+        
+        # Gerar e Enviar PDF
+        pdf = gerar_pdf(id_obra, risco, status, graf)
+        await update.message.reply_document(
+            document=InputFile(pdf, filename=f"Relatorio_{id_obra}.pdf"),
+            caption="Segue o relatório executivo detalhado."
         )
-        await update.message.reply_text(relatorio, parse_mode="Markdown")
     else:
-        await update.message.reply_text(f"❌ ID `{id_obra}` não localizado no banco.")
+        await update.message.reply_text("❌ Obra não encontrada.")
 
-async def registrar_nota(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    desc = " ".join(context.args)
-    if not desc:
-        await update.message.reply_text("Digite a descrição. Ex: `/obra Material entregue`")
-        return
-    
-    try:
-        with SessionLocal() as db:
-            nova_nota = RegistroObra(
-                telegram_id=update.effective_user.id, 
-                usuario=update.effective_user.first_name, 
-                descricao=desc
-            )
-            db.add(nova_nota)
-            db.commit()
-        await update.message.reply_text("✅ Nota registrada com sucesso.")
-    except Exception as e:
-        await update.message.reply_text("❌ Erro ao salvar no banco.")
-        logger.error(f"Erro ao salvar nota: {e}")
-
-# 6. Configuração FastAPI e Ciclo de Vida do Bot
+# 6. Ciclo de Vida e FastAPI
 app = FastAPI()
-
-# Criamos a aplicação do Bot globalmente
 ptb = Application.builder().token(TOKEN).build()
 ptb.add_handler(CommandHandler("start", start))
 ptb.add_handler(CommandHandler("analise", analise_preditiva))
-ptb.add_handler(CommandHandler("obra", registrar_nota))
 
-async def run_telegram_polling():
-    """Inicia o bot em modo polling"""
+async def run_bot():
     await ptb.initialize()
     await ptb.start()
     await ptb.updater.start_polling()
-    logger.info("Bot do Telegram iniciado em modo Polling.")
-    
-    # Mantém o loop rodando
-    while True:
-        await asyncio.sleep(3600)
+    while True: await asyncio.sleep(3600)
 
 @app.on_event("startup")
-async def startup_event():
-    """Executa quando o FastAPI inicia (O Render detecta a porta aqui)"""
-    # Roda o Bot em uma Thread separada para não travar a porta 10000
-    threading.Thread(target=lambda: asyncio.run(run_telegram_polling()), daemon=True).start()
+async def startup():
+    threading.Thread(target=lambda: asyncio.run(run_bot()), daemon=True).start()
 
 @app.get("/")
-async def health():
-    return {"status": "online", "message": "Servidor Web e Bot ativos"}
+async def health(): return {"status": "active"}
