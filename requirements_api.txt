@@ -14,7 +14,7 @@ python-telegram-bot==22.7
 sqlalchemy>=2.0.48   # corrigido para suportar Python 3.14
 pg8000==1.31.5
 alembic==1.18.4
-psycopg2-binary==2.9.11   # opcional, útil em migrações
+psycopg==3.3.3   # opcional, útil em migrações
 
 # --- Ciência de Dados / ML ---
 pandas==3.0.0
