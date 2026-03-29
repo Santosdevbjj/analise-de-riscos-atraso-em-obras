@@ -25,23 +25,27 @@ RESOURCES = {"pipeline": None, "features": None, "engine": None}
 def get_resources():
     if RESOURCES["engine"] is None:
         db_url = os.getenv("DATABASE_URL")
-        # [span_6](start_span)[span_7](start_span)Regra 2026: Forçar driver psycopg + Transaction Pooler (Porta 6543)[span_6](end_span)[span_7](end_span)
+        
+        # Regra 2026: Forçar driver psycopg + Transaction Pooler (Porta 6543)
         if db_url and "postgresql://" in db_url:
             db_url = db_url.replace("postgresql://", "postgresql+psycopg://")
         
         RESOURCES["engine"] = create_engine(
             db_url,
-            [span_8](start_span)connect_args={"prepare_threshold": 0}, # Crucial para o Pooler do Supabase[span_8](end_span)
+            connect_args={"prepare_threshold": 0}, # Crucial para o Pooler do Supabase
             pool_pre_ping=True
         )
+        
+        # Carregamento dos modelos
         RESOURCES["pipeline"] = joblib.load(BASE_DIR / "models/pipeline_random_forest.pkl")
         RESOURCES["features"] = joblib.load(BASE_DIR / "models/features_metadata.joblib")
+        
     return RESOURCES
 
 async def processar_analise(update: Update, context: ContextTypes.DEFAULT_TYPE, id_obra: str):
     res = get_resources()
     try:
-        # Busca no Supabase (Transaction Mode)
+        # Busca no Supabase (Transaction Mode) via SQLAlchemy
         query = text("SELECT * FROM view_analise_preditiva WHERE UPPER(id_obra) = :val LIMIT 1")
         with res["engine"].connect() as conn:
             df = pd.read_sql(query, conn, params={"val": id_obra.upper()})
