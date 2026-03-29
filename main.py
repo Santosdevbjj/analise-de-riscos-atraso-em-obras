@@ -6,10 +6,11 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters
 from scripts.telegram_bot import processar_analise
 
+# Configuração de Logs
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# [span_11](start_span)[span_12](start_span)Variáveis de Ambiente[span_11](end_span)[span_12](end_span)
+# Variáveis de Ambiente
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 RENDER_URL = "https://analiseriscosatrasoobras.onrender.com"
 
@@ -22,20 +23,24 @@ async def start(update: Update, context):
 
 async def handle_message(update: Update, context):
     id_obra = update.message.text.strip()
-    await processar_analise(update, context, id_obra)
+    if id_obra:
+        await processar_analise(update, context, id_obra)
 
 tg_app.add_handler(CommandHandler("start", start))
 tg_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-# [span_13](start_span)[span_14](start_span)Rota de Webhook (Recebe dados do Telegram)[span_13](end_span)[span_14](end_span)
+# Rota de Webhook (Recebe dados do Telegram)
 @app.post("/webhook")
 async def webhook_handler(request: Request):
-    data = await request.json()
-    update = Update.de_json(data, tg_app.bot)
-    await tg_app.process_update(update)
+    try:
+        data = await request.json()
+        update = Update.de_json(data, tg_app.bot)
+        await tg_app.process_update(update)
+    except Exception as e:
+        logger.error(f"Erro no Webhook: {e}")
     return {"status": "ok"}
 
-# [span_15](start_span)[span_16](start_span)Inicialização Automática do Webhook[span_15](end_span)[span_16](end_span)
+# Inicialização Automática do Webhook
 @app.on_event("startup")
 async def startup_event():
     await tg_app.initialize()
