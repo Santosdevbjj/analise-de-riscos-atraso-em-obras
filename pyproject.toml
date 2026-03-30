@@ -7,7 +7,7 @@ requires-python = "==3.14.3"
 dependencies = [
     "fastapi[standard]>=0.135.2",
     "uvicorn>=0.42.0",
-    "scikit-learn==1.6.1",  # CRÍTICO: Mantém a versão do seu .pkl
+    "scikit-learn==1.8.0",  # CRÍTICO: Mantém a versão do seu .pkl
     "pandas>=3.0.0",
     "joblib>=1.5.3",
 ]
