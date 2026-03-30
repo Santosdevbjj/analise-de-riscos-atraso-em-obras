@@ -1,2 +1,21 @@
-fastapi==0.135.2
-uvicorn==0.42.0
+[project]
+name = "ccbjj-ia-api"
+version = "1.0.0"
+description = "API de Previsão de Risco de Obras - CCBJJ"
+requires-python = "==3.14.3"
+# Aqui definimos as dependências exatas para o Render
+dependencies = [
+    "fastapi[standard]>=0.135.2",
+    "uvicorn>=0.42.0",
+    "scikit-learn==1.8.0",  # CRÍTICO: Mantém a versão do seu .pkl
+    "pandas>=3.0.1",
+    "joblib>=1.5.3",
+]
+
+[tool.fastapi]
+# Indica ao comando 'fastapi run' onde está o seu objeto app
+entrypoint = "main:app"
+
+[build-system]
+requires = ["setuptools>=82.0.1", "wheel"]
+build-backend = "setuptools.build_meta"
