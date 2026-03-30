@@ -17,8 +17,8 @@ alembic==1.18.4
 psycopg[binary]==3.3.3  
 
 # --- Ciência de Dados / ML ---
-pandas==3.0.0
-numpy==2.4.3
+pandas==3.0.1
+numpy==2.4.4
 scikit-learn==1.8.0
 joblib==1.5.3
 Faker>=40.11.1
