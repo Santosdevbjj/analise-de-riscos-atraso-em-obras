@@ -10,3 +10,4 @@ seaborn==0.13.2
 sqlalchemy==2.0.48
 psycopg[binary]==3.3.3
 python-dotenv==1.2.2
+faker==10.4.0
