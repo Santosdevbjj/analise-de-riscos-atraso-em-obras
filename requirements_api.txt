@@ -21,7 +21,7 @@ pandas==3.0.0
 numpy==2.4.3
 scikit-learn==1.8.0
 joblib==1.5.3
-faker==10.4.0
+faker==40.11.1
 
 # --- Visualização ---
 matplotlib>=3.10.8
