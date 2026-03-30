@@ -17,7 +17,7 @@ RENDER_URL = os.getenv("RENDER_EXTERNAL_URL", "https://analiseriscosatrasoobras.
 
 app = FastAPI(title="CCBJJ-IA-Gateway")
 
-# Instância Global do Bot (NÃO iniciamos aqui, apenas configuramos o builder)
+# Instância Global do Bot
 tg_app = Application.builder().token(TOKEN).build()
 
 # Handlers do Bot
@@ -42,49 +42,32 @@ tg_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_messag
 
 @app.api_route("/", methods=["GET", "HEAD"])
 async def health_check(request: Request):
-    """
-    Health check robusto que aceita GET e HEAD.
-    Evita o erro 405 disparado pelo monitoramento do Render.
-    """
+    """Aceita GET e HEAD para o health check do Render."""
     return {"status": "online", "version": "2026.1", "mode": "webhook"}
 
 @app.post("/webhook")
 async def telegram_webhook(request: Request):
-    """
-    Ponto de entrada único para mensagens do Telegram.
-    Processamento assíncrono puro, sem threads externas.
-    """
+    """Processamento de Webhook do Telegram."""
     try:
         data = await request.json()
         update = Update.de_json(data, tg_app.bot)
-        # Enfileira o update no processamento interno do PTB
         await tg_app.process_update(update)
         return Response(status_code=status.HTTP_200_OK)
     except Exception as e:
-        logger.error(f"Falha crítica no processamento do Webhook: {e}")
+        logger.error(f"Falha no Webhook: {e}")
         return Response(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # --- CICLO DE VIDA ---
 
 @app.on_event("startup")
 async def on_startup():
-    """
-    Configuração de inicialização seguindo o padrão Cloud-Native.
-    """
     await tg_app.initialize()
     await tg_app.start()
-    
     webhook_url = f"{RENDER_URL}/webhook"
-    # drop_pending_updates=True evita o 'flood' de mensagens acumuladas durante o deploy
     await tg_app.bot.set_webhook(url=webhook_url, drop_pending_updates=True)
-    
-    logger.info(f"🚀 Bot inicializado com sucesso. Webhook ativo em: {webhook_url}")
+    logger.info(f"🚀 Bot operando em: {webhook_url}")
 
 @app.on_event("shutdown")
 async def on_shutdown():
-    """
-    Graceful shutdown para evitar corrupção de memória ou conexões pendentes.
-    """
-    logger.info("Encerrando serviços...")
     await tg_app.stop()
     await tg_app.shutdown()
