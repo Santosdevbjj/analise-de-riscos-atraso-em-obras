@@ -7,181 +7,195 @@ import os
 import sys
 from pathlib import Path
 
-# --- CORREÇÃO DE PATHS PARA STREAMLIT CLOUD ---
-# Resolve o erro "ModuleNotFoundError: No module named 'scripts'"
+# --- CONFIGURAÇÃO DE AMBIENTE (Streamlit Cloud) ---
 file_path = Path(__file__).resolve()
 scripts_dir = file_path.parent
 root_dir = scripts_dir.parent
 
+# Garante que o Python encontre os módulos na raiz
 if str(root_dir) not in sys.path:
     sys.path.insert(0, str(root_dir))
-if str(scripts_dir) not in sys.path:
-    sys.path.insert(0, str(scripts_dir))
 
-# 1. CONFIGURAÇÃO DA PÁGINA (Padrão Executivo)
+# 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(
-    page_title="CCbjj - Engenharia", 
+    page_title="CCBJJ - Inteligência de Risco", 
     page_icon="🏗️", 
     layout="wide"
 )
 
-# Estilização CSS para um visual profissional
+# Estilização Profissional
 st.markdown("""
     <style>
     .main { background-color: #f8f9fa; }
-    div[data-testid="metric-container"] {
+    [data-testid="metric-container"] {
         background-color: #ffffff;
-        border: 1px solid #e0e0e0;
-        padding: 15px;
         border-radius: 10px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        padding: 15px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        border-left: 5px solid #1B5E20;
     }
-    .stMetric label { font-weight: bold; color: #1B5E20; }
+    .stMetric label { font-size: 1.1rem !important; font-weight: 600 !important; color: #1B5E20 !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# 2. CARREGAMENTO DE ASSETS (Otimizado com caminhos relativos ao Root)
+# 2. CARREGAMENTO DE ATIVOS (Cacheado)
 @st.cache_resource
 def load_assets():
-    # Caminhos baseados na raiz do projeto
+    # Caminhos baseados na estrutura do repositório
     m_path = root_dir / "models" / "pipeline_random_forest.pkl"
     f_path = root_dir / "models" / "features_metadata.joblib"
     d_path = root_dir / "data" / "processed" / "df_mestre_consolidado.csv.gz"
     
-    # Carregamento do Modelo e Metadados
-    pipeline = joblib.load(m_path) if m_path.exists() else None
-    features = joblib.load(f_path) if f_path.exists() else None
-    
-    # Carregamento do Dataframe
-    df = pd.DataFrame()
-    if d_path.exists():
-        try:
+    try:
+        # Carrega o Pipeline (que já contém o ColumnTransformer)
+        pipeline = joblib.load(m_path)
+        
+        # Carrega a lista de colunas EXATAS que o modelo espera (fit_columns)
+        # De acordo com os logs, o modelo espera colunas como 'etapa', 'status', 'cidade', etc.
+        features_metadata = joblib.load(f_path)
+        
+        # Carrega os dados históricos para preencher a UI
+        if d_path.exists():
             df = pd.read_csv(d_path, compression='gzip')
-        except Exception:
-            df = pd.read_csv(d_path) # Tenta sem compressão se falhar
-    else:
-        # Fallback para CSV comum na mesma pasta
-        alt_path = root_dir / "data" / "processed" / "df_mestre_consolidado.csv"
-        if alt_path.exists():
-            df = pd.read_csv(alt_path)
+        else:
+            # Tenta sem compressão caso o arquivo esteja extraído
+            alt_path = root_dir / "data" / "processed" / "df_mestre_consolidado.csv"
+            df = pd.read_csv(alt_path) if alt_path.exists() else pd.DataFrame()
             
-    return pipeline, features, df
+        return pipeline, features_metadata, df
+    except Exception as e:
+        st.error(f"Erro crítico no carregamento: {e}")
+        return None, None, pd.DataFrame()
 
-pipeline, features_order, df_base = load_assets()
+pipeline, expected_features, df_base = load_assets()
 
-# --- INTERFACE LATERAL (PAINEL DE CONTROLE) ---
+# --- PAINEL LATERAL ---
 with st.sidebar:
     st.image("https://img.icons8.com/fluency/96/construction.png", width=80)
-    st.title("🕹️ Parâmetros da Obra")
-    st.markdown("Ajuste as variáveis para simulação em tempo real.")
+    st.title("🕹️ Parâmetros")
     
-    def get_options(col, default_list):
-        if not df_base.empty and col in df_base.columns:
-            opts = [str(x).title() for x in df_base[col].unique() if pd.notna(x)]
-            return sorted(list(set(opts)))
-        return default_list
+    def get_opts(column):
+        if not df_base.empty and column in df_base.columns:
+            return sorted([str(x).title() for x in df_base[column].unique() if pd.notna(x)])
+        return ["Padrão"]
 
-    cidade_ui = st.selectbox("Localização", get_options('cidade', ['Recife', 'São Paulo']))
-    etapa_ui = st.selectbox("Etapa Construtiva", get_options('etapa', ['Fundação', 'Estrutura', 'Acabamento']))
-    solo_ui = st.selectbox("Geologia do Terreno", get_options('tipo_solo', ['Argiloso', 'Arenoso', 'Rochoso']))
-    material_ui = st.selectbox("Insumo Crítico", get_options('material', ['Cimento', 'Aço', 'Brita']))
+    cidade_ui = st.selectbox("Localização", get_opts('cidade'))
+    etapa_ui = st.selectbox("Etapa da Obra", get_opts('etapa'))
+    solo_ui = st.selectbox("Tipo de Solo", get_opts('tipo_solo'))
+    material_ui = st.selectbox("Material Crítico", get_opts('material'))
     
-    st.markdown("---")
-    val_chuva = st.slider("Previsão Pluviométrica (mm)", 0, 800, 150)
-    val_rating = st.select_slider("Rating de Confiança do Fornecedor", options=[1, 2, 3, 4, 5], value=3)
+    st.divider()
+    val_chuva = st.slider("Precipitação (mm)", 0, 800, 150)
+    val_rating = st.select_slider("Rating Fornecedor", options=[1, 2, 3, 4, 5], value=3)
 
-# --- CORPO DO DASHBOARD ---
-st.title("🛡️ CCBJJ Engenharia & Inteligência de Risco 2.0")
-st.caption("Sistema Preditivo de Atrasos para Decisão de Diretoria e Logística")
-st.markdown("---")
+# --- CONTEÚDO PRINCIPAL ---
+st.title("🛡️ CCBJJ Engenharia: Análise Preditiva de Risco")
+st.caption("Previsão de cronograma baseada em Random Forest e histórico consolidado")
 
-if pipeline is None or features_order is None:
-    st.error(f"🚨 **Erro de Deploy:** Ativos da IA não encontrados. Verifique se os arquivos estão em: `{root_dir}/models/`")
+if pipeline is None:
+    st.warning("⚠️ O sistema está aguardando os arquivos de IA para iniciar.")
 else:
     try:
-        # Extração de Dados de Contexto
+        # 1. OBTER MÉDIAS HISTÓRICAS PARA O CONTEXTO
+        # O modelo precisa de colunas que não estão na UI (ex: orcamento_estimado, risco_etapa)
         if not df_base.empty:
-            contexto = df_base[(df_base['cidade'].str.lower() == cidade_ui.lower()) & 
-                               (df_base['etapa'].str.lower() == etapa_ui.lower())]
-            if not contexto.empty:
-                orcamento = contexto['orcamento_estimado'].mean()
-                complexidade = contexto['complexidade_obra'].mean()
-                risco_etapa = contexto['risco_etapa'].mean()
-                taxa_forn = contexto['taxa_insucesso_fornecedor'].mean()
-            else:
-                orcamento, complexidade, risco_etapa, taxa_forn = 12000000.0, 15.0, 5.0, 0.12
+            filt = df_base[df_base['cidade'].str.lower() == cidade_ui.lower()]
+            if filt.empty: filt = df_base
+            
+            # Valores de referência para o cenário selecionado
+            orcamento = filt['orcamento_estimado'].median()
+            prazo_prev = filt['prazo_previsto_dias'].median()
+            complexidade = filt['complexidade_obra'].median()
+            taxa_forn = filt['taxa_insucesso_fornecedor'].mean()
+            risco_etapa = filt['risco_etapa'].mean()
+            clima_solo = filt['fator_clima_solo'].mean()
+            logistica = filt['score_logistica'].mean()
         else:
-            orcamento, complexidade, risco_etapa, taxa_forn = 10000000.0, 10.0, 4.0, 0.10
+            orcamento, prazo_prev, complexidade, taxa_forn, risco_etapa, clima_solo, logistica = 10000000.0, 180, 10.0, 0.1, 5.0, 1.0, 3.0
 
-        # Montagem do DataFrame para Predição
-        input_dict = {
-            'orcamento_estimado': float(orcamento),
-            'rating_confiabilidade': float(val_rating),
-            'taxa_insucesso_fornecedor': float(taxa_forn),
-            'complexidade_obra': float(complexidade),
-            'risco_etapa': float(risco_etapa),
-            'nivel_chuva': float(val_chuva),
-            'tipo_solo': solo_ui.lower(),
-            'material': material_ui.lower(),
+        # 2. CONSTRUÇÃO DO DATAFRAME DE ENTRADA
+        # O Pipeline espera as colunas ORIGINAIS (antes do One-Hot Encoding)
+        # O erro de "Feature names mismatch" ocorria porque você passava as colunas já transformadas
+        input_data = pd.DataFrame([{
+            'etapa': etapa_ui.lower(),
+            'status': 'em andamento',
             'cidade': cidade_ui.lower(),
-            'etapa': etapa_ui.lower()
-        }
-        
-        input_df = pd.DataFrame([input_dict])
-        
-        # Alinhamento de Features (One-Hot Encoding Manual / Reindex)
-        # Cria colunas faltantes com valor 0
-        input_prepared = pd.get_dummies(input_df)
-        input_prepared = input_prepared.reindex(columns=features_order, fill_value=0)
+            'data_inicio_prevista': '2025-01-01', # Placeholder
+            'id_fornecedor': 'FORN-DEFAULT',
+            'material': material_ui.lower(),
+            'tipo_solo': solo_ui.lower(),
+            'dias_atraso': 0, 
+            'orcamento_estimado': float(orcamento),
+            'prazo_previsto_dias': float(prazo_prev),
+            'prazo_real_dias': float(prazo_prev),
+            'chuva_mm': float(val_chuva),
+            'atrasou': 0,
+            'atrasou_entrega': 0,
+            'rating_confiabilidade': float(val_rating),
+            'nivel_chuva': float(val_chuva),
+            'complexidade_obra': float(complexidade),
+            'taxa_insucesso_fornecedor': float(taxa_forn),
+            'fator_clima_solo': float(clima_solo),
+            'score_logistica': float(logistica),
+            'risco_etapa': float(risco_etapa)
+        }])
 
-        # Execução da IA
-        pred_dias = float(pipeline.predict(input_prepared)[0])
+        # Reordena as colunas para o que o Pipeline viu no fit()
+        # Isso garante que o ColumnTransformer não quebre
+        final_input = input_data[expected_features]
+
+        # 3. PREDICÃO
+        pred_dias = float(pipeline.predict(final_input)[0])
         pred_dias = max(0, pred_dias)
 
-        # MÉTRICAS
+        # EXIBIÇÃO DE RESULTADOS
         m1, m2, m3 = st.columns(3)
         with m1:
             st.metric("Atraso Estimado", f"{pred_dias:.1f} Dias")
         with m2:
-            status = "🔴 Crítico" if pred_dias > 12 else "🟡 Alerta" if pred_dias > 7 else "🟢 Estável"
-            st.metric("Status do Risco", status)
+            status = "🔴 Crítico" if pred_dias > 12 else "🟡 Alerta" if pred_dias > 6 else "🟢 Estável"
+            st.metric("Risco do Cenário", status)
         with m3:
-            st.metric("Custo de Oportunidade (Est.)", f"R$ {pred_dias * 5000:,.2f}")
+            custo_est = pred_dias * 4500 # Custo diário estimado
+            st.metric("Impacto Financeiro (Est.)", f"R$ {custo_est:,.2f}")
 
-        st.markdown("### 📈 Análise de Sensibilidade")
-        col_a, col_b = st.columns(2)
-
-        with col_a:
-            st.subheader("Simulação: Chuva vs. Atraso")
-            faixas = np.linspace(0, 800, 20)
-            lista_sim = []
-            for f in faixas:
-                temp_df = input_prepared.copy()
-                temp_df['nivel_chuva'] = float(f)
-                lista_sim.append(pipeline.predict(temp_df)[0])
+        # GRÁFICOS DE SENSIBILIDADE
+        st.divider()
+        c1, c2 = st.columns(2)
+        
+        with c1:
+            st.subheader("Simulação de Clima")
+            faixa_chuva = np.linspace(0, 800, 15)
+            preds_chuva = []
+            for c in faixa_chuva:
+                sim_df = final_input.copy()
+                sim_df['chuva_mm'] = c
+                sim_df['nivel_chuva'] = c
+                preds_chuva.append(pipeline.predict(sim_df)[0])
             
-            fig_chuva = px.line(x=faixas, y=lista_sim, markers=True, template="plotly_white",
-                               labels={'x': 'Chuva (mm)', 'y': 'Dias de Atraso'})
-            fig_chuva.update_traces(line_color='#2E7D32')
+            fig_chuva = px.line(x=faixa_chuva, y=preds_chuva, markers=True, 
+                               labels={'x': 'Chuva (mm)', 'y': 'Atraso'}, template="plotly_white")
+            fig_chuva.update_traces(line_color='#1B5E20')
             st.plotly_chart(fig_chuva, use_container_width=True)
-
-        with col_b:
-            st.subheader("Impacto por Geologia")
-            solos = ['arenoso', 'argiloso', 'rochoso']
-            lista_solo = []
-            for s in solos:
-                temp_df = input_df.copy()
-                temp_df['tipo_solo'] = s
-                temp_prepared = pd.get_dummies(temp_df).reindex(columns=features_order, fill_value=0)
-                lista_solo.append(pipeline.predict(temp_prepared)[0])
             
-            fig_solo = px.bar(x=[s.title() for s in solos], y=lista_solo, color=lista_solo,
-                             color_continuous_scale='Greens', labels={'x': 'Solo', 'y': 'Atraso'})
-            st.plotly_chart(fig_solo, use_container_width=True)
+        with c2:
+            st.subheader("Risco por Fornecedor")
+            ratings = [1, 2, 3, 4, 5]
+            preds_rate = []
+            for r in ratings:
+                sim_df = final_input.copy()
+                sim_df['rating_confiabilidade'] = r
+                preds_rate.append(pipeline.predict(sim_df)[0])
+            
+            fig_rate = px.bar(x=ratings, y=preds_rate, color=preds_rate, 
+                             color_continuous_scale="Greens", labels={'x': 'Rating', 'y': 'Atraso'})
+            st.plotly_chart(fig_rate, use_container_width=True)
 
-        st.info(f"💡 **Nota:** Simulação baseada no cenário de {cidade_ui} para a etapa de {etapa_ui}.")
+        st.info(f"💡 Dica: O cenário em {cidade_ui} para a etapa de {etapa_ui} sugere foco em {material_ui}.")
 
     except Exception as e:
-        st.error(f"Erro na inferência da IA: {e}")
+        st.error(f"Erro na predição: {e}")
+        st.info("O modelo espera colunas específicas. Verifique os logs do terminal.")
 
-st.markdown("<br><hr><center><b>CCBJJ Engenharia & Inteligência de Risco v2.0</b> | Sergio Santos</center>", unsafe_allow_html=True)
+st.markdown("---")
+st.markdown("<center><b>CCBJJ Engenharia & Data Science v2.0</b> | Sergio Santos</center>", unsafe_allow_html=True)
