@@ -172,6 +172,9 @@ try:
         val = pipeline.predict(temp_df)[0]
         impacto_clima.append(max(0, val))
 
-    fig = px.line(x=faixa_chuva, y=impacto_clima,
-                 labels={'x': 'Chuva Esperada (mm)', 'y': 'Dias de Atraso'},
-                 title="Impacto da Chuva no Cronograma",
+    fig = px.line(
+        x=faixa_chuva,
+        y=impacto_clima,
+        labels={'x': 'Chuva Esperada (mm)', 'y': 'Dias de Atraso'},
+        title="Impacto da Chuva no Cronograma",
+        color_discrete_sequence=["#
