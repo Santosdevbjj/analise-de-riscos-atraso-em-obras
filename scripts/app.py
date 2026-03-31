@@ -5,6 +5,7 @@ import joblib
 import plotly.express as px
 import os
 
+# Configuração da página
 st.set_page_config(
     page_title="Predição de Riscos - BJJ Dev",
     page_icon="🏗️",
@@ -12,12 +13,14 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# --- CONFIGURAÇÃO DE CAMINHOS ---
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODEL_PATH = os.path.join(BASE_DIR, 'models', 'pipeline_random_forest.pkl')
 METADATA_PATH = os.path.join(BASE_DIR, 'models', 'features_metadata.joblib')
 DATA_PATH = os.path.join(BASE_DIR, 'data', 'processed', 'df_mestre_consolidado.csv.gz')
 LOGO_PATH = os.path.join(BASE_DIR, 'assets', 'logo_ccbjj.png')
 
+# --- FUNÇÕES DE CARREGAMENTO ---
 @st.cache_resource
 def load_ml_resources():
     resources = {'pipeline': None, 'metadata': None}
@@ -44,10 +47,11 @@ def load_historical_data():
         st.error(f"Erro ao carregar banco de dados: {e}")
         return None
 
+# --- INTERFACE PRINCIPAL ---
 if os.path.exists(LOGO_PATH):
     st.image(LOGO_PATH, width=200)
 
-st.title('🏗️ Análise de Riscos e Atrasos em Obras')
+st.title('🏗️ Dashboard de Riscos e Atrasos em Obras')
 st.info("Sistema Inteligente de Predição de Cronograma - Versão 2026")
 
 resources = load_ml_resources()
@@ -65,7 +69,7 @@ with st.sidebar:
     lista_cidades = sorted(df_full['cidade'].unique()) if df_full is not None else ["recife", "manaus", "sao_paulo"]
     lista_etapas = sorted(df_full['etapa'].unique()) if df_full is not None else ["fundação", "estrutura", "acabamento"]
     lista_materiais = sorted(df_full['material'].unique()) if df_full is not None else ["concreto", "aço", "piso"]
-    lista_solos = ["arenoso", "argiloso", "rochoso"]
+    lista_solos = sorted(df_full['tipo_solo'].unique()) if df_full is not None and 'tipo_solo' in df_full.columns else ["arenoso", "argiloso", "rochoso"]
 
     cidade = st.selectbox("Localidade", lista_cidades)
     etapa = st.selectbox("Etapa Atual", lista_etapas)
@@ -116,58 +120,58 @@ if metadata and 'features' in metadata:
         st.error(f"❌ Colunas ausentes no input: {missing_cols}")
         st.stop()
 
-res_col1, res_col2 = st.columns([1, 1.5])
+# --- DASHBOARD ---
+st.markdown("## 📊 Resultado da IA e Relatórios Avançados")
 
-with res_col1:
-    st.subheader("📊 Resultado da IA")
-    try:
-        prediction = pipeline.predict(input_df)[0]
-        resultado_dias = max(0, prediction)
+col1, col2, col3 = st.columns([1, 1, 1])
 
-        if resultado_dias > 7:
-            st.error("**Risco Crítico**")
-            cor_delta = "inverse"
-        elif resultado_dias > 3:
-            st.warning("**Risco Moderado**")
-            cor_delta = "normal"
-        else:
-            st.success("**Baixo Risco**")
-            cor_delta = "normal"
+try:
+    prediction = pipeline.predict(input_df)[0]
+    resultado_dias = max(0, prediction)
 
-        st.metric(label="Atraso Estimado", value=f"{resultado_dias:.1f} dias", delta_color=cor_delta)
-        st.write("---")
-        st.caption(f"A análise para {etapa} em {cidade.title()} considera variáveis climáticas, tipo de solo {tipo_solo} e o histórico do material {material}.")
-    except Exception as e:
-        st.error(f"Erro na análise: {e}")
-
-with res_col2:
-    st.subheader("📈 Simulação de Clima vs Atraso")
-    try:
-        faixa_chuva = np.linspace(0, 500, 15).tolist()
-        impacto_clima = []
-        for c in faixa_chuva:
-            temp_df = input_df.copy()
-            temp_df['chuva_mm'] = float(c)
-            temp_df['nivel_chuva'] = float(c)
-            val = pipeline.predict(temp_df)[0]
-            impacto_clima.append(max(0, val))
-
-        fig = px.area(x=faixa_chuva, y=impacto_clima,
-                     labels={'x': 'Chuva Esperada (mm)', 'y': 'Dias de Atraso'},
-                     title="Impacto Pluviométrico no Cronograma",
-                     color_discrete_sequence=['#1B5E20'])
-        st.plotly_chart(fig, use_container_width=True)
-    except Exception as e:
-        st.warning(f"Não foi possível gerar o gráfico de simulação: {e}")
-
-st.divider()
-expander = st.expander("📂 Explorar Base de Dados Histórica")
-with expander:
-    if df_full is not None:
-        st.write(f"Total de registros: {len(df_full)}")
-        cidades_disponiveis = df_full['cidade'].unique()
-        filtro = st.multiselect("Filtrar visualização por cidade:", cidades_disponiveis)
-        df_display = df_full[df_full['cidade'].isin(filtro)] if filtro else df_full
-        st.dataframe(df_display.head(100), use_container_width=True)
+    # Cores vivas para UX/UI
+    if resultado_dias > 7:
+        col1.metric("Atraso Estimado", f"{resultado_dias:.1f} dias", delta="ALTO", delta_color="inverse")
+        st.error("🚨 **Risco Crítico**")
+    elif resultado_dias > 3:
+        col1.metric("Atraso Estimado", f"{resultado_dias:.1f} dias", delta="MÉDIO", delta_color="off")
+        st.warning("⚠️ **Risco Moderado**")
     else:
-        st.warning("Base histórica não carregada.")
+        col1.metric("Atraso Estimado", f"{resultado_dias:.1f} dias", delta="BAIXO", delta_color="normal")
+        st.success("✅ **Baixo Risco**")
+
+    # Relatório sintético
+    col2.markdown("### 🔎 Insights")
+    col2.write(f"- Cidade: **{cidade.title()}**")
+    col2.write(f"- Etapa: **{etapa}**")
+    col2.write(f"- Material: **{material}**")
+    col2.write(f"- Tipo de Solo: **{tipo_solo}**")
+    col2.write(f"- Previsão de chuva: **{chuva} mm**")
+    col2.write(f"- Rating fornecedor: **{confiabilidade}**")
+    col2.write(f"- Orçamento: R$ {orcamento:,.0f}")
+
+    # Distribuição histórica
+    if df_full is not None and 'dias_atraso' in df_full.columns:
+        fig_hist = px.histogram(df_full, x="dias_atraso", nbins=30,
+                                title="Distribuição Histórica de Atrasos",
+                                color_discrete_sequence=["#FF5722"])
+        col3.plotly_chart(fig_hist, use_container_width=True)
+
+except Exception as e:
+    st.error(f"Erro na análise: {e}")
+
+# --- Simulação de Clima vs Atraso ---
+st.markdown("## 🌦️ Simulação de Impacto Climático")
+try:
+    faixa_chuva = np.linspace(0, 500, 15).tolist()
+    impacto_clima = []
+    for c in faixa_chuva:
+        temp_df = input_df.copy()
+        temp_df['chuva_mm'] = float(c)
+        temp_df['nivel_chuva'] = float(c)
+        val = pipeline.predict(temp_df)[0]
+        impacto_clima.append(max(0, val))
+
+    fig = px.line(x=faixa_chuva, y=impacto_clima,
+                 labels={'x': 'Chuva Esperada (mm)', 'y': 'Dias de Atraso'},
+                 title="Impacto da Chuva no Cronograma",
