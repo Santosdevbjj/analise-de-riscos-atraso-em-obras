@@ -175,6 +175,4 @@ try:
     fig = px.line(
         x=faixa_chuva,
         y=impacto_clima,
-        labels={'x': 'Chuva Esperada (mm)', 'y': 'Dias de Atraso'},
-        title="Impacto da Chuva no Cronograma",
-        color)
+        labels={'x': 'Chuva Esperada (mm)',
