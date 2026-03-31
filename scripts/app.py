@@ -4,6 +4,16 @@ import joblib
 import plotly.express as px
 import numpy as np
 import os
+import sys
+from pathlib import Path
+
+# Adiciona a raiz do projeto ao PATH do Python
+file = Path(__file__).resolve()
+parent, root = file.parent, file.parents[1]
+sys.path.append(str(root))
+
+
+
 
 # 1. CONFIGURAÇÃO DA PÁGINA (Padrão Executivo)
 st.set_page_config(
