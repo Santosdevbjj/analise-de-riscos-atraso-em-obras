@@ -186,4 +186,6 @@ try:
         plot_bgcolor="#ffffff",
         paper_bgcolor="#f8f9fa",
         font=dict(size=14, color="#212121"),
-        title_font=dict
+        title_font=dict(size=18, color="#0d47a1", family="Arial Black"),
+        xaxis=dict(showgrid=True, gridcolor="#e0e0e0"),
+        yaxis=dict(showgrid=True, grid
