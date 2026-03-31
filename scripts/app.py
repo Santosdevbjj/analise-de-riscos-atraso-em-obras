@@ -5,84 +5,104 @@ import joblib
 import plotly.express as px
 import os
 
-# Configuração da página (Estilo moderno conforme documentação)
+# Configuração da página para o padrão moderno de 2026
 st.set_page_config(
     page_title="Predição de Riscos - BJJ Dev",
     page_icon="🏗️",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
-# --- FUNÇÕES COM CACHE (Conforme tutorial oficial) ---
+# --- CONFIGURAÇÃO DE CAMINHOS ---
+# Definindo caminhos relativos baseados na estrutura do seu repositório
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+MODEL_PATH = os.path.join(BASE_DIR, 'models', 'pipeline_random_forest.pkl')
+METADATA_PATH = os.path.join(BASE_DIR, 'models', 'features_metadata.joblib')
+DATA_PATH = os.path.join(BASE_DIR, 'data', 'processed', 'df_mestre_consolidado.csv.gz')
+
+# --- FUNÇÕES DE CARREGAMENTO COM CACHE ---
 
 @st.cache_resource
-def load_model():
-    """Carrega o modelo de Machine Learning (Sklearn 1.8.0)"""
+def load_ml_resources():
+    """Carrega o modelo e metadados de features"""
+    resources = {'pipeline': None, 'metadata': None}
     try:
-        # Caminho relativo para o GitHub
-        model_path = 'pipeline_random_forest.pkl'
-        if os.path.exists(model_path):
-            return joblib.load(model_path)
-        return None
+        if os.path.exists(MODEL_PATH):
+            resources['pipeline'] = joblib.load(MODEL_PATH)
+        if os.path.exists(METADATA_PATH):
+            resources['metadata'] = joblib.load(METADATA_PATH)
+        return resources
     except Exception as e:
-        st.error(f"Erro ao carregar modelo: {e}")
-        return None
+        st.error(f"Erro ao carregar recursos de ML: {e}")
+        return resources
 
 @st.cache_data
-def load_data():
-    """Carrega o dataset consolidado"""
+def load_historical_data():
+    """Carrega o dataset consolidado para análise histórica"""
     try:
-        df = pd.read_csv('df_mestre_consolidado.csv.gz', compression='gzip')
-        # Garantir conversão de datas como no tutorial Uber
-        if 'data_inicio_prevista' in df.columns:
-            df['data_inicio_prevista'] = pd.to_datetime(df['data_inicio_prevista'])
-        return df
+        if os.path.exists(DATA_PATH):
+            df = pd.read_csv(DATA_PATH, compression='gzip')
+            # Tratamento de datas
+            date_cols = ['data_inicio_prevista']
+            for col in date_cols:
+                if col in df.columns:
+                    df[col] = pd.to_datetime(df[col])
+            return df
+        return None
     except Exception as e:
-        st.error(f"Erro ao carregar dados: {e}")
+        st.error(f"Erro ao carregar banco de dados: {e}")
         return None
 
-# --- INÍCIO DO APP ---
+# --- INTERFACE PRINCIPAL ---
 
 st.title('🏗️ Análise de Riscos e Atrasos em Obras')
-st.markdown("""
-Esta aplicação utiliza **Inteligência Artificial** para prever o atraso estimado em dias 
-com base em fatores climáticos, logística e histórico de fornecedores.
-""")
+st.info("Sistema Inteligente de Predição de Cronograma - Versão 2026")
 
-# Carregamento de recursos
-pipeline = load_model()
-df_full = load_data()
+# Carregar recursos
+resources = load_ml_resources()
+pipeline = resources['pipeline']
+metadata = resources['metadata']
+df_full = load_historical_data()
 
+# Verificação de integridade dos arquivos
 if pipeline is None:
-    st.warning("⚠️ O modelo 'pipeline_random_forest.pkl' não foi encontrado no repositório.")
+    st.error(f"❌ Erro Crítico: Modelo não encontrado em `{MODEL_PATH}`")
+    st.markdown("Verifique se o arquivo `pipeline_random_forest.pkl` está na pasta `models/`.")
     st.stop()
 
-# --- SIDEBAR DE FILTROS (Interatividade conforme tutorial) ---
-st.sidebar.header("Parâmetros da Obra")
+# --- SIDEBAR: ENTRADA DE DADOS ---
+st.sidebar.header("🛠️ Parâmetros da Obra")
 
 with st.sidebar:
-    cidade = st.selectbox("Cidade", ["recife", "manaus", "sao_paulo", "fortaleza"])
-    etapa = st.selectbox("Etapa da Obra", ["fundação", "estrutura", "acabamento", "instalações"])
-    material = st.selectbox("Material Principal", ["concreto", "aço", "madeira", "piso"])
+    # Seleção de Cidade e Etapa baseada nos dados se disponíveis
+    lista_cidades = sorted(df_full['cidade'].unique()) if df_full is not None else ["recife", "manaus", "sao_paulo"]
+    lista_etapas = sorted(df_full['etapa'].unique()) if df_full is not None else ["fundação", "estrutura", "acabamento"]
+    lista_materiais = sorted(df_full['material'].unique()) if df_full is not None else ["concreto", "aço", "piso"]
+    
+    cidade = st.selectbox("Localidade", lista_cidades)
+    etapa = st.selectbox("Etapa Atual", lista_etapas)
+    material = st.selectbox("Material Principal", lista_materiais)
     
     st.divider()
     
-    chuva = st.slider("Chuva Prevista (mm)", 0, 500, 50)
-    confiabilidade = st.select_slider("Rating de Confiabilidade do Fornecedor", 
-                                    options=[1, 2, 3, 4, 5], value=3)
+    chuva = st.slider("Previsão Pluviométrica (mm)", 0, 500, 50, help="Volume de chuva esperado para o período da etapa")
+    confiabilidade = st.select_slider("Rating do Fornecedor", options=[1, 2, 3, 4, 5], value=3)
+    orcamento = st.number_input("Orçamento Estimado (R$)", min_value=10000, value=1000000)
 
-# --- ÁREA DE PREDIÇÃO ---
+# --- LÓGICA DE PREDIÇÃO ---
 
-# Criar dataframe de entrada para o modelo
-input_dict = {
+# Criando o DataFrame de entrada com TODAS as colunas que o modelo espera
+# O modelo Random Forest exige exatamente as mesmas colunas do treinamento
+input_data = {
     'etapa': [etapa],
     'status': ['Em Andamento'],
     'cidade': [cidade],
     'data_inicio_prevista': [pd.Timestamp.now()],
     'material': [material],
-    'tipo_solo': ['arenoso'], # Valor default
+    'tipo_solo': ['arenoso'], # Valor padrão
     'chuva_mm': [float(chuva)],
     'rating_confiabilidade': [float(confiabilidade)],
-    'orcamento_estimado': [1000000.0],
+    'orcamento_estimado': [float(orcamento)],
     'prazo_previsto_dias': [120],
     'prazo_real_dias': [0],
     'atrasou': [0],
@@ -91,51 +111,73 @@ input_dict = {
     'complexidade_obra': [15.0],
     'taxa_insucesso_fornecedor': [0.5],
     'fator_clima_solo': [100.0],
-    'score_logistica': [3.0]
+    'score_logistica': [float(confiabilidade)],
+    'id_fornecedor': ['FORN-GENERICO'] # Adicionado para evitar erro de coluna ausente
 }
 
-input_df = pd.DataFrame(input_dict)
+input_df = pd.DataFrame(input_data)
 
-col1, col2 = st.columns([1, 2])
+# Layout de colunas para resultados
+res_col1, res_col2 = st.columns([1, 1.5])
 
-with col1:
-    st.subheader("Resultado da Predição")
+with res_col1:
+    st.subheader("📊 Resultado da IA")
     try:
-        predicao = pipeline.predict(input_df)[0]
+        # Realiza a predição
+        resultado_dias = pipeline.predict(input_df)[0]
         
-        # Estilização do resultado
-        cor_alerta = "red" if predicao > 5 else "orange" if predicao > 2 else "green"
-        st.metric(label="Atraso Estimado", value=f"{predicao:.1f} dias", delta_color="inverse")
-        
-        if predicao > 5:
-            st.error("🚨 Risco Alto de Atraso detectado!")
-        elif predicao > 2:
-            st.warning("⚠️ Risco Moderado.")
+        # Define cor e status
+        if resultado_dias > 7:
+            st.error(f"**Risco Crítico**")
+            cor = "inverse"
+        elif resultado_dias > 3:
+            st.warning(f"**Risco Moderado**")
+            cor = "normal"
         else:
-            st.success("✅ Obra dentro do cronograma esperado.")
-            
-    except Exception as e:
-        st.error(f"Erro na predição: {e}")
+            st.success(f"**Baixo Risco**")
+            cor = "normal"
 
-with col2:
-    st.subheader("Análise de Sensibilidade")
-    # Gráfico simples de impacto da chuva (Simulando variação)
-    faixa_chuva = list(range(0, 501, 50))
-    impacto = []
+        st.metric(label="Atraso Estimado", value=f"{resultado_dias:.1f} dias", delta_color=cor)
+        
+        st.write("---")
+        st.write("**Resumo da Análise:**")
+        st.caption(f"A combinação de fatores em {cidade.title()} para a etapa de {etapa} indica uma variação provável no cronograma.")
+
+    except Exception as e:
+        st.error(f"Falha na Predição: {e}")
+        st.info("Dica: Verifique se as colunas do modelo coincidem com o input.")
+
+with res_col2:
+    st.subheader("📈 Simulação de Clima vs Atraso")
+    # Gerando variação dinâmica para o gráfico
+    faixa_chuva = np.linspace(0, 500, 10).tolist()
+    impacto_clima = []
+    
     for c in faixa_chuva:
         temp_df = input_df.copy()
-        temp_df['chuva_mm'] = float(c)
-        temp_df['nivel_chuva'] = float(c)
-        impacto.append(pipeline.predict(temp_df)[0])
+        temp_df['chuva_mm'] = c
+        temp_df['nivel_chuva'] = c
+        impacto_clima.append(pipeline.predict(temp_df)[0])
     
-    fig = px.line(x=faixa_chuva, y=impacto, labels={'x':'Chuva (mm)', 'y':'Atraso (dias)'},
-                 title="Impacto do Clima no Cronograma")
+    fig = px.area(x=faixa_chuva, y=impacto_clima, 
+                 labels={'x': 'Chuva Esperada (mm)', 'y': 'Dias de Atraso'},
+                 title="Sensibilidade Pluviométrica",
+                 color_discrete_sequence=['#1B5E20'])
     st.plotly_chart(fig, use_container_width=True)
 
-# --- VISUALIZAÇÃO DE DADOS (Checkbox como no tutorial Uber) ---
-if st.checkbox('Ver base de dados histórica (Raw Data)'):
-    st.subheader('Dados Consolidados')
+# --- VISUALIZAÇÃO DE DADOS HISTÓRICOS ---
+st.divider()
+expander = st.expander("📂 Explorar Dados Históricos (Dataset Consolidado)")
+with expander:
     if df_full is not None:
-        st.dataframe(df_full.head(100))
+        st.write(f"Exibindo amostra de {len(df_full)} registros carregados de `{DATA_PATH}`")
+        # Filtro rápido na visualização
+        filtro_cidade = st.multiselect("Filtrar por Cidade", options=df_full['cidade'].unique())
+        if filtro_cidade:
+            st.dataframe(df_full[df_full['cidade'].isin(filtro_cidade)].head(50))
+        else:
+            st.dataframe(df_full.head(50))
     else:
-        st.info("Dataset não disponível para visualização.")
+        st.warning("⚠️ Base de dados histórica não encontrada no caminho especificado.")
+
+st.sidebar.caption("BJJ Dev Analytics © 2026")
