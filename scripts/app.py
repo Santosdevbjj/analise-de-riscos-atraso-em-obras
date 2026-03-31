@@ -7,13 +7,16 @@ import os
 import sys
 from pathlib import Path
 
-# Adiciona a raiz do projeto ao PATH do Python
-file = Path(__file__).resolve()
-parent, root = file.parent, file.parents[1]
-sys.path.append(str(root))
+# --- CORREÇÃO DE PATHS PARA STREAMLIT CLOUD ---
+# Resolve o erro "ModuleNotFoundError: No module named 'scripts'"
+file_path = Path(__file__).resolve()
+scripts_dir = file_path.parent
+root_dir = scripts_dir.parent
 
-
-
+if str(root_dir) not in sys.path:
+    sys.path.insert(0, str(root_dir))
+if str(scripts_dir) not in sys.path:
+    sys.path.insert(0, str(scripts_dir))
 
 # 1. CONFIGURAÇÃO DA PÁGINA (Padrão Executivo)
 st.set_page_config(
@@ -37,25 +40,31 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 2. CARREGAMENTO DE ASSETS (Otimizado com caminhos absolutos)
+# 2. CARREGAMENTO DE ASSETS (Otimizado com caminhos relativos ao Root)
 @st.cache_resource
 def load_assets():
-    # Define a base do projeto para evitar erros de caminho no Streamlit Cloud
-    base_path = os.getcwd()
-    m_path = os.path.join(base_path, "models", "pipeline_random_forest.pkl")
-    f_path = os.path.join(base_path, "models", "features_metadata.joblib")
-    d_path = os.path.join(base_path, "data", "processed", "df_mestre_consolidado.csv.gz")
+    # Caminhos baseados na raiz do projeto
+    m_path = root_dir / "models" / "pipeline_random_forest.pkl"
+    f_path = root_dir / "models" / "features_metadata.joblib"
+    d_path = root_dir / "data" / "processed" / "df_mestre_consolidado.csv.gz"
     
-    pipeline = joblib.load(m_path) if os.path.exists(m_path) else None
-    features = joblib.load(f_path) if os.path.exists(f_path) else None
+    # Carregamento do Modelo e Metadados
+    pipeline = joblib.load(m_path) if m_path.exists() else None
+    features = joblib.load(f_path) if f_path.exists() else None
     
-    if os.path.exists(d_path):
-        df = pd.read_csv(d_path, compression='gzip')
+    # Carregamento do Dataframe
+    df = pd.DataFrame()
+    if d_path.exists():
+        try:
+            df = pd.read_csv(d_path, compression='gzip')
+        except Exception:
+            df = pd.read_csv(d_path) # Tenta sem compressão se falhar
     else:
-        # Fallback para CSV comum se o GZ não existir
-        alt_path = d_path.replace(".gz", "")
-        df = pd.read_csv(alt_path) if os.path.exists(alt_path) else pd.DataFrame()
-        
+        # Fallback para CSV comum na mesma pasta
+        alt_path = root_dir / "data" / "processed" / "df_mestre_consolidado.csv"
+        if alt_path.exists():
+            df = pd.read_csv(alt_path)
+            
     return pipeline, features, df
 
 pipeline, features_order, df_base = load_assets()
@@ -69,7 +78,7 @@ with st.sidebar:
     def get_options(col, default_list):
         if not df_base.empty and col in df_base.columns:
             opts = [str(x).title() for x in df_base[col].unique() if pd.notna(x)]
-            return sorted(opts)
+            return sorted(list(set(opts)))
         return default_list
 
     cidade_ui = st.selectbox("Localização", get_options('cidade', ['Recife', 'São Paulo']))
@@ -87,12 +96,13 @@ st.caption("Sistema Preditivo de Atrasos para Decisão de Diretoria e Logística
 st.markdown("---")
 
 if pipeline is None or features_order is None:
-    st.error("🚨 **Atenção:** Ativos da IA não encontrados na pasta `/models`. Verifique o deploy no GitHub.")
+    st.error(f"🚨 **Erro de Deploy:** Ativos da IA não encontrados. Verifique se os arquivos estão em: `{root_dir}/models/`")
 else:
     try:
-        # Extração de Médias de Contexto do Banco de Dados
+        # Extração de Dados de Contexto
         if not df_base.empty:
-            contexto = df_base[(df_base['cidade'] == cidade_ui.lower()) & (df_base['etapa'] == etapa_ui.lower())]
+            contexto = df_base[(df_base['cidade'].str.lower() == cidade_ui.lower()) & 
+                               (df_base['etapa'].str.lower() == etapa_ui.lower())]
             if not contexto.empty:
                 orcamento = contexto['orcamento_estimado'].mean()
                 complexidade = contexto['complexidade_obra'].mean()
@@ -103,7 +113,7 @@ else:
         else:
             orcamento, complexidade, risco_etapa, taxa_forn = 10000000.0, 10.0, 4.0, 0.10
 
-        # Montagem do DataFrame de Predição (Contrato com o Modelo)
+        # Montagem do DataFrame para Predição
         input_dict = {
             'orcamento_estimado': float(orcamento),
             'rating_confiabilidade': float(val_rating),
@@ -118,58 +128,60 @@ else:
         }
         
         input_df = pd.DataFrame([input_dict])
-        # Alinha colunas e preenche faltantes (dummy variables do modelo)
-        for col in features_order:
-            if col not in input_df.columns:
-                input_df[col] = 0
-        input_df = input_df[features_order]
+        
+        # Alinhamento de Features (One-Hot Encoding Manual / Reindex)
+        # Cria colunas faltantes com valor 0
+        input_prepared = pd.get_dummies(input_df)
+        input_prepared = input_prepared.reindex(columns=features_order, fill_value=0)
 
-        # Execução da Predição
-        pred_dias = float(pipeline.predict(input_df)[0])
+        # Execução da IA
+        pred_dias = float(pipeline.predict(input_prepared)[0])
         pred_dias = max(0, pred_dias)
 
-        # MÉTRICAS PRINCIPAIS
+        # MÉTRICAS
         m1, m2, m3 = st.columns(3)
         with m1:
             st.metric("Atraso Estimado", f"{pred_dias:.1f} Dias")
         with m2:
-            status = "🔴 Crítico" if pred_dias > 10 else "🟡 Alerta" if pred_dias > 6 else "🟢 Estável"
+            status = "🔴 Crítico" if pred_dias > 12 else "🟡 Alerta" if pred_dias > 7 else "🟢 Estável"
             st.metric("Status do Risco", status)
         with m3:
-            # Estimativa de custo de atraso: R$ 5.000,00 por dia (exemplo)
-            st.metric("Custo de Oportunidade", f"R$ {pred_dias * 5000:,.2f}")
+            st.metric("Custo de Oportunidade (Est.)", f"R$ {pred_dias * 5000:,.2f}")
 
-        st.markdown("### 📈 Análises de Sensibilidade")
+        st.markdown("### 📈 Análise de Sensibilidade")
         col_a, col_b = st.columns(2)
 
         with col_a:
-            st.subheader("Simulação de Chuva vs. Atraso")
-            faixa_chuva = np.linspace(0, 800, 20)
-            # Simulação rápida criando cópias do dataframe
-            sim_chuva = pd.concat([input_df.assign(nivel_chuva=c) for c in faixa_chuva])
-            preds_chuva = pipeline.predict(sim_chuva)
+            st.subheader("Simulação: Chuva vs. Atraso")
+            faixas = np.linspace(0, 800, 20)
+            lista_sim = []
+            for f in faixas:
+                temp_df = input_prepared.copy()
+                temp_df['nivel_chuva'] = float(f)
+                lista_sim.append(pipeline.predict(temp_df)[0])
             
-            fig_chuva = px.line(x=faixa_chuva, y=preds_chuva, 
-                               labels={'x': 'Nível de Chuva (mm)', 'y': 'Dias de Atraso'},
-                               markers=True, template="plotly_white")
+            fig_chuva = px.line(x=faixas, y=lista_sim, markers=True, template="plotly_white",
+                               labels={'x': 'Chuva (mm)', 'y': 'Dias de Atraso'})
             fig_chuva.update_traces(line_color='#2E7D32')
             st.plotly_chart(fig_chuva, use_container_width=True)
 
         with col_b:
             st.subheader("Impacto por Geologia")
-            tipos_solo = ['arenoso', 'argiloso', 'rochoso', 'siltoso']
-            # Simulação por categoria de solo
-            sim_solo = pd.concat([input_df.assign(tipo_solo=s) for s in tipos_solo])
-            preds_solo = pipeline.predict(sim_solo)
+            solos = ['arenoso', 'argiloso', 'rochoso']
+            lista_solo = []
+            for s in solos:
+                temp_df = input_df.copy()
+                temp_df['tipo_solo'] = s
+                temp_prepared = pd.get_dummies(temp_df).reindex(columns=features_order, fill_value=0)
+                lista_solo.append(pipeline.predict(temp_prepared)[0])
             
-            fig_solo = px.bar(x=[s.title() for s in tipos_solo], y=preds_solo,
-                             labels={'x': 'Geologia', 'y': 'Atraso Estimado'},
-                             color=preds_solo, color_continuous_scale='Greens')
+            fig_solo = px.bar(x=[s.title() for s in solos], y=lista_solo, color=lista_solo,
+                             color_continuous_scale='Greens', labels={'x': 'Solo', 'y': 'Atraso'})
             st.plotly_chart(fig_solo, use_container_width=True)
 
-        st.success(f"📌 **Insight Técnico:** A combinação de solo **{solo_ui}** com previsão de **{val_chuva}mm** de chuva indica atenção especial na etapa de **{etapa_ui}**.")
+        st.info(f"💡 **Nota:** Simulação baseada no cenário de {cidade_ui} para a etapa de {etapa_ui}.")
 
     except Exception as e:
-        st.error(f"Erro no processamento da IA: {e}")
+        st.error(f"Erro na inferência da IA: {e}")
 
-st.markdown("<br><hr><center><b>CCBJJ Engenharia & Inteligência de Risco v2.0</b> | Inteligência Artificial Aplicada à Construção Civil | Desenvolvido por Sergio Santos | Cientista de Dados</center>", unsafe_allow_html=True)
+st.markdown("<br><hr><center><b>CCBJJ Engenharia & Inteligência de Risco v2.0</b> | Sergio Santos</center>", unsafe_allow_html=True)
