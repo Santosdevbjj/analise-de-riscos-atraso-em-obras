@@ -59,15 +59,18 @@ if pipeline is None:
     st.error(f"❌ Erro Crítico: Modelo não encontrado em `{MODEL_PATH}`")
     st.stop()
 
+# --- SIDEBAR ---
 st.sidebar.header("🛠️ Parâmetros da Obra")
 with st.sidebar:
     lista_cidades = sorted(df_full['cidade'].unique()) if df_full is not None else ["recife", "manaus", "sao_paulo"]
     lista_etapas = sorted(df_full['etapa'].unique()) if df_full is not None else ["fundação", "estrutura", "acabamento"]
     lista_materiais = sorted(df_full['material'].unique()) if df_full is not None else ["concreto", "aço", "piso"]
+    lista_solos = ["arenoso", "argiloso", "rochoso"]
 
     cidade = st.selectbox("Localidade", lista_cidades)
     etapa = st.selectbox("Etapa Atual", lista_etapas)
     material = st.selectbox("Material Principal", lista_materiais)
+    tipo_solo = st.selectbox("Tipo do Solo", lista_solos)
 
     st.divider()
     chuva = st.slider("Previsão Pluviométrica (mm)", 0, 500, 50)
@@ -82,14 +85,13 @@ with st.sidebar:
     st.caption("BJJ Dev Analytics © 2026")
 
 # --- LÓGICA DE PREDIÇÃO ---
-# Ajuste: data_inicio_prevista agora é uma string padrão para evitar erro de label
 input_data = {
     'etapa': [etapa],
     'status': ['Em Andamento'],
     'cidade': [cidade],
     'data_inicio_prevista': ['2025-01-01'],  # valor fixo conhecido pelo modelo
     'material': [material],
-    'tipo_solo': ['arenoso'],
+    'tipo_solo': [tipo_solo],
     'chuva_mm': [float(chuva)],
     'rating_confiabilidade': [float(confiabilidade)],
     'orcamento_estimado': [float(orcamento)],
@@ -134,7 +136,7 @@ with res_col1:
 
         st.metric(label="Atraso Estimado", value=f"{resultado_dias:.1f} dias", delta_color=cor_delta)
         st.write("---")
-        st.caption(f"A análise para {etapa} em {cidade.title()} considera variáveis climáticas e o histórico do material {material}.")
+        st.caption(f"A análise para {etapa} em {cidade.title()} considera variáveis climáticas, tipo de solo {tipo_solo} e o histórico do material {material}.")
     except Exception as e:
         st.error(f"Erro na análise: {e}")
 
@@ -165,4 +167,7 @@ with expander:
         st.write(f"Total de registros: {len(df_full)}")
         cidades_disponiveis = df_full['cidade'].unique()
         filtro = st.multiselect("Filtrar visualização por cidade:", cidades_disponiveis)
-        df_display = df_full[df_full['cidade'].isin(filtro)] if
+        df_display = df_full[df_full['cidade'].isin(filtro)] if filtro else df_full
+        st.dataframe(df_display.head(100), use_container_width=True)
+    else:
+        st.warning("Base histórica não carregada.")
