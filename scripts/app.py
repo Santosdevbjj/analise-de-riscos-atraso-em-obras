@@ -5,7 +5,6 @@ import joblib
 import plotly.express as px
 import os
 
-# Configuração da página
 st.set_page_config(
     page_title="Predição de Riscos - BJJ Dev",
     page_icon="🏗️",
@@ -13,14 +12,12 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- CONFIGURAÇÃO DE CAMINHOS ---
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODEL_PATH = os.path.join(BASE_DIR, 'models', 'pipeline_random_forest.pkl')
 METADATA_PATH = os.path.join(BASE_DIR, 'models', 'features_metadata.joblib')
 DATA_PATH = os.path.join(BASE_DIR, 'data', 'processed', 'df_mestre_consolidado.csv.gz')
 LOGO_PATH = os.path.join(BASE_DIR, 'assets', 'logo_ccbjj.png')
 
-# --- FUNÇÕES DE CARREGAMENTO COM CACHE ---
 @st.cache_resource
 def load_ml_resources():
     resources = {'pipeline': None, 'metadata': None}
@@ -47,7 +44,6 @@ def load_historical_data():
         st.error(f"Erro ao carregar banco de dados: {e}")
         return None
 
-# --- INTERFACE PRINCIPAL ---
 if os.path.exists(LOGO_PATH):
     st.image(LOGO_PATH, width=200)
 
@@ -63,7 +59,6 @@ if pipeline is None:
     st.error(f"❌ Erro Crítico: Modelo não encontrado em `{MODEL_PATH}`")
     st.stop()
 
-# --- SIDEBAR ---
 st.sidebar.header("🛠️ Parâmetros da Obra")
 with st.sidebar:
     lista_cidades = sorted(df_full['cidade'].unique()) if df_full is not None else ["recife", "manaus", "sao_paulo"]
@@ -87,11 +82,12 @@ with st.sidebar:
     st.caption("BJJ Dev Analytics © 2026")
 
 # --- LÓGICA DE PREDIÇÃO ---
+# Ajuste: data_inicio_prevista agora é uma string padrão para evitar erro de label
 input_data = {
     'etapa': [etapa],
     'status': ['Em Andamento'],
     'cidade': [cidade],
-    'data_inicio_prevista': [pd.Timestamp.now()],
+    'data_inicio_prevista': ['2025-01-01'],  # valor fixo conhecido pelo modelo
     'material': [material],
     'tipo_solo': ['arenoso'],
     'chuva_mm': [float(chuva)],
@@ -111,7 +107,6 @@ input_data = {
 }
 input_df = pd.DataFrame(input_data)
 
-# --- Validação Automática de Colunas ---
 if metadata and 'features' in metadata:
     expected_cols = set(metadata['features'])
     missing_cols = expected_cols - set(input_df.columns)
@@ -119,7 +114,6 @@ if metadata and 'features' in metadata:
         st.error(f"❌ Colunas ausentes no input: {missing_cols}")
         st.stop()
 
-# --- RESULTADOS ---
 res_col1, res_col2 = st.columns([1, 1.5])
 
 with res_col1:
@@ -164,7 +158,6 @@ with res_col2:
     except Exception as e:
         st.warning(f"Não foi possível gerar o gráfico de simulação: {e}")
 
-# --- VISUALIZAÇÃO DE DADOS HISTÓRICOS ---
 st.divider()
 expander = st.expander("📂 Explorar Base de Dados Histórica")
 with expander:
@@ -172,7 +165,4 @@ with expander:
         st.write(f"Total de registros: {len(df_full)}")
         cidades_disponiveis = df_full['cidade'].unique()
         filtro = st.multiselect("Filtrar visualização por cidade:", cidades_disponiveis)
-        df_display = df_full[df_full['cidade'].isin(filtro)] if filtro else df_full
-        st.dataframe(df_display.head(100), use_container_width=True)
-    else:
-        st.warning("Base histórica não carregada.")
+        df_display = df_full[df_full['cidade'].isin(filtro)] if
