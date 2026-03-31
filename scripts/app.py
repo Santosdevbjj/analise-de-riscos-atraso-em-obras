@@ -3,6 +3,9 @@ import pandas as pd
 import numpy as np
 import joblib
 import plotly.express as px
+import seaborn as sns
+import matplotlib.pyplot as plt
+import shap
 import os
 
 # Configuração da página
@@ -81,19 +84,12 @@ with st.sidebar:
     confiabilidade = st.select_slider("Rating do Fornecedor", options=[1, 2, 3, 4, 5], value=3)
     orcamento = st.number_input("Orçamento Estimado (R$)", min_value=10000, value=1000000)
 
-    st.divider()
-    st.markdown("### 👨‍💻 Desenvolvedor")
-    st.write("**Sérgio Santos**")
-    st.markdown("[🌐 Portfólio](https://portfoliosantossergio.vercel.app)")
-    st.markdown("[🔗 LinkedIn](https://www.linkedin.com/in/santossergioluiz)")
-    st.caption("BJJ Dev Analytics © 2026")
-
 # --- LÓGICA DE PREDIÇÃO ---
 input_data = {
     'etapa': [etapa],
     'status': ['Em Andamento'],
     'cidade': [cidade],
-    'data_inicio_prevista': ['2025-01-01'],  # valor fixo conhecido pelo modelo
+    'data_inicio_prevista': ['2025-01-01'],
     'material': [material],
     'tipo_solo': [tipo_solo],
     'chuva_mm': [float(chuva)],
@@ -113,52 +109,58 @@ input_data = {
 }
 input_df = pd.DataFrame(input_data)
 
-if metadata and 'features' in metadata:
-    expected_cols = set(metadata['features'])
-    missing_cols = expected_cols - set(input_df.columns)
-    if missing_cols:
-        st.error(f"❌ Colunas ausentes no input: {missing_cols}")
-        st.stop()
-
 # --- DASHBOARD ---
 st.markdown("## 📊 Resultado da IA e Relatórios Avançados")
-
-col1, col2, col3 = st.columns([1, 1, 1])
 
 try:
     prediction = pipeline.predict(input_df)[0]
     resultado_dias = max(0, prediction)
 
-    # Cores vivas para UX/UI
     if resultado_dias > 7:
-        col1.metric("Atraso Estimado", f"{resultado_dias:.1f} dias", delta="ALTO", delta_color="inverse")
-        st.error("🚨 **Risco Crítico**")
+        st.error(f"🚨 Risco Crítico: {resultado_dias:.1f} dias de atraso")
     elif resultado_dias > 3:
-        col1.metric("Atraso Estimado", f"{resultado_dias:.1f} dias", delta="MÉDIO", delta_color="off")
-        st.warning("⚠️ **Risco Moderado**")
+        st.warning(f"⚠️ Risco Moderado: {resultado_dias:.1f} dias de atraso")
     else:
-        col1.metric("Atraso Estimado", f"{resultado_dias:.1f} dias", delta="BAIXO", delta_color="normal")
-        st.success("✅ **Baixo Risco**")
+        st.success(f"✅ Baixo Risco: {resultado_dias:.1f} dias de atraso")
 
-    # Relatório sintético
-    col2.markdown("### 🔎 Insights")
-    col2.write(f"- Cidade: **{cidade.title()}**")
-    col2.write(f"- Etapa: **{etapa}**")
-    col2.write(f"- Material: **{material}**")
-    col2.write(f"- Tipo de Solo: **{tipo_solo}**")
-    col2.write(f"- Previsão de chuva: **{chuva} mm**")
-    col2.write(f"- Rating fornecedor: **{confiabilidade}**")
-    col2.write(f"- Orçamento: R$ {orcamento:,.0f}")
-
-    # Distribuição histórica
-    if df_full is not None and 'dias_atraso' in df_full.columns:
-        fig_hist = px.histogram(df_full, x="dias_atraso", nbins=30,
-                                title="Distribuição Histórica de Atrasos",
-                                color_discrete_sequence=["#FF5722"])
-        col3.plotly_chart(fig_hist, use_container_width=True)
+    st.markdown("### 🔎 Insights")
+    st.write(f"- Cidade: **{cidade.title()}**")
+    st.write(f"- Etapa: **{etapa}**")
+    st.write(f"- Material: **{material}**")
+    st.write(f"- Tipo de Solo: **{tipo_solo}**")
+    st.write(f"- Previsão de chuva: **{chuva} mm**")
+    st.write(f"- Rating fornecedor: **{confiabilidade}**")
+    st.write(f"- Orçamento: R$ {orcamento:,.0f}")
 
 except Exception as e:
     st.error(f"Erro na análise: {e}")
+
+# --- Comparação entre cidades/etapas ---
+st.markdown("## 🏙️ Comparação entre Cidades e Etapas")
+if df_full is not None:
+    fig_comp = px.box(df_full, x="cidade", y="dias_atraso", color="etapa",
+                      title="Comparação de Atrasos por Cidade e Etapa",
+                      color_discrete_sequence=px.colors.qualitative.Bold)
+    st.plotly_chart(fig_comp, use_container_width=True)
+
+# --- Heatmap de correlação ---
+st.markdown("## 🔥 Heatmap de Correlação")
+if df_full is not None:
+    corr = df_full.corr(numeric_only=True)
+    fig, ax = plt.subplots(figsize=(10, 6))
+    sns.heatmap(corr, annot=True, cmap="coolwarm", ax=ax)
+    st.pyplot(fig)
+
+# --- Explicabilidade com SHAP ---
+st.markdown("## 🧠 Explicabilidade do Modelo (SHAP)")
+try:
+    explainer = shap.Explainer(pipeline)
+    shap_values = explainer(input_df)
+    st.set_option('deprecation.showPyplotGlobalUse', False)
+    shap.summary_plot(shap_values, input_df, plot_type="bar")
+    st.pyplot(bbox_inches='tight')
+except Exception as e:
+    st.warning(f"Não foi possível gerar explicabilidade SHAP: {e}")
 
 # --- Simulação de Clima vs Atraso ---
 st.markdown("## 🌦️ Simulação de Impacto Climático")
@@ -177,16 +179,7 @@ try:
         y=impacto_clima,
         labels={'x': 'Chuva Esperada (mm)', 'y': 'Dias de Atraso'},
         title="Impacto da Chuva no Cronograma",
-        color_discrete_sequence=["#2196F3"]  # azul vivo para destaque
+        color_discrete_sequence=["#2196F3"]
     )
-    
-    fig.update_layout(
-        margin=dict(l=20, r=20, t=40, b=20),
-        plot_bgcolor="#ffffff",
-        paper_bgcolor="#f8f9fa",
-        font=dict(size=14, color="#212121")
-    )
-    st.plotly_chart(fig, use_container_width=True)
-
-except Exception as e:
-    st.warning(f"Não foi possível gerar o gráfico de simulação: {e}")
+    fig.update_layout(margin=dict(l=20, r=20, t=40, b=20),
+                      plot_bgcolor="#
