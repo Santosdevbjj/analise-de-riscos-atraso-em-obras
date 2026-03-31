@@ -177,4 +177,4 @@ try:
         y=impacto_clima,
         labels={'x': 'Chuva Esperada (mm)', 'y': 'Dias de Atraso'},
         title="Impacto da Chuva no Cronograma",
-        color_discrete_sequence=["#
+        color
