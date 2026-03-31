@@ -1,4 +1,4 @@
-requirements_streamlit.txt
+run requirements_streamlit.txt
 streamlit==1.55.0
 pandas==3.0.0
 numpy==2.4.4
