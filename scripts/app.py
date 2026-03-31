@@ -181,9 +181,12 @@ try:
     )
     
     fig.update_layout(
-    margin=dict(l=20, r=20, t=40, b=20),
-    plot_bgcolor="#f9f9f9",
-    paper_bgcolor="#f0f0f0",
-    font=dict(size=14, color="#333333")
-)
-st.plotly_chart(fig, use_container_width=True) 
+        margin=dict(l=20, r=20, t=40, b=20),
+        plot_bgcolor="#ffffff",
+        paper_bgcolor="#f8f9fa",
+        font=dict(size=14, color="#212121")
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+except Exception as e:
+    st.warning(f"Não foi possível gerar o gráfico de simulação: {e}")
