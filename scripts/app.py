@@ -179,4 +179,5 @@ try:
         title="Impacto da Chuva no Cronograma",
         color_discrete_sequence=["#2196F3"]  # azul vivo para destaque
     )
-    fig.update_layout(margin=dict(l=20, r=20, t=
+    fig.update_layout(margin=dict(l=20, r=20, t=40, b=20))
+    st.plotly_chart(fig, use_container_width=True
