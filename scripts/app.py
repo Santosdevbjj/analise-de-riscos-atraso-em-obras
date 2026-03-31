@@ -182,10 +182,12 @@ try:
         color_discrete_sequence=["#2196F3"]
     )
     fig.update_layout(
-        margin=dict(l=20, r=20, t=40, b=20),
-        plot_bgcolor="#ffffff",
-        paper_bgcolor="#f8f9fa",
-        font=dict(size=14, color="#212121"),
-        title_font=dict(size=18, color="#0d47a1", family="Arial Black"),
-        xaxis=dict(showgrid=True, gridcolor="#e0e0e0"),
-        yaxis=dict(showgrid=True, grid
+    margin=dict(l=20, r=20, t=40, b=20),
+    plot_bgcolor="#ffffff",
+    paper_bgcolor="#f8f9fa",
+    font=dict(size=14, color="#212121"),
+    title_font=dict(size=18, color="#0d47a1", family="Arial Black"),
+    xaxis=dict(showgrid=True, gridcolor="#e0e0e0"),
+    yaxis=dict(showgrid=True, gridcolor="#e0e0e0")
+)
+st.plotly_chart(fig, use_container_width=True)
