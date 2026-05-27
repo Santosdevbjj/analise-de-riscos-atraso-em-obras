@@ -12,7 +12,7 @@
 [![Telegram Bot](https://img.shields.io/badge/Bot-Telegram-26A5E4?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/CCbjj_risk_bot)
 
 
-> *Disciplina, estratégia e dados aplicados à engenharia civil.*
+> *Disciplina, estratégia e dados aplicados à engenharia civil.* 
 
 ---
 
