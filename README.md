@@ -294,7 +294,7 @@ analiseRiscosAtrasoObras/
 ```
 
 ---
-
+   
 **Autor:** Sérgio Santos — Cientista de Dados | Ambientes Críticos e Governança de Dados
 
 [![Portfólio Sérgio Santos](https://img.shields.io/badge/Portfólio-Sérgio_Santos-111827?style=for-the-badge&logo=githubpages&logoColor=00eaff)](https://portfoliosantossergio.vercel.app)
