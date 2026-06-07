@@ -169,7 +169,6 @@ if shap is not None:
         explainer = shap.Explainer(model, X_transformed)
         shap_values = explainer(X_transformed)
 
-        # st.set_option('deprecation.showPyplotGlobalUse', False)
         shap.summary_plot(shap_values, X_transformed, plot_type="bar")
         st.pyplot(plt.gcf())
     except Exception as e:
@@ -195,7 +194,7 @@ try:
         labels={'x': 'Chuva Esperada (mm)', 'y': 'Dias de Atraso'},
         title="Impacto da Chuva no Cronograma",
         color_discrete_sequence=["#2196F3"]
-    ) 
+    )
     fig.update_layout(
         margin=dict(l=20, r=20, t=40, b=20),
         plot_bgcolor="#ffffff",
@@ -209,3 +208,4 @@ try:
 
 except Exception as e:
     st.warning(f"Não foi possível gerar o gráfico de simulação: {e}")
+    
