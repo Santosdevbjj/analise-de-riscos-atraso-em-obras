@@ -9,24 +9,11 @@ import os
 import importlib
 
 # Verificação segura do SHAP
-shap_spec = importlib.util.find_spec("shap") 
-if shap is not None:
-    try:
-        # aplica o pré-processamento
-        X_transformed = pipeline.named_steps['preprocessor'].transform(input_df)
-        model = pipeline.named_steps['regressor']
-
-        explainer = shap.Explainer(model, X_transformed)
-        shap_values = explainer(X_transformed)
-
-        st.set_option('deprecation.showPyplotGlobalUse', False)
-        shap.summary_plot(shap_values, X_transformed, plot_type="bar")
-        st.pyplot(plt.gcf())
-    except Exception as e:
-        st.warning(f"Não foi possível gerar explicabilidade SHAP: {e}")
+shap_spec = importlib.util.find_spec("shap")
+if shap_spec is not None:
+    import shap
 else:
-    st.info("📌 SHAP não está instalado neste ambiente. Adicione `shap` ao requirements.txt para habilitar explicabilidade.")
-
+    shap = None
 
 # Configuração da página
 st.set_page_config(
@@ -175,11 +162,16 @@ if df_full is not None:
 st.markdown("## 🧠 Explicabilidade do Modelo (SHAP)")
 if shap is not None:
     try:
-        explainer = shap.Explainer(pipeline)
-        shap_values = explainer(input_df)
+        # aplica o pré-processamento e usa apenas o regressor
+        X_transformed = pipeline.named_steps['preprocessor'].transform(input_df)
+        model = pipeline.named_steps['regressor']
+
+        explainer = shap.Explainer(model, X_transformed)
+        shap_values = explainer(X_transformed)
+
         st.set_option('deprecation.showPyplotGlobalUse', False)
-        shap.summary_plot(shap_values, input_df, plot_type="bar")
-        st.pyplot(plt.gcf())  # garante que o gráfico atual seja exibido
+        shap.summary_plot(shap_values, X_transformed, plot_type="bar")
+        st.pyplot(plt.gcf())
     except Exception as e:
         st.warning(f"Não foi possível gerar explicabilidade SHAP: {e}")
 else:
@@ -204,16 +196,3 @@ try:
         title="Impacto da Chuva no Cronograma",
         color_discrete_sequence=["#2196F3"]
     )
-    fig.update_layout(
-        margin=dict(l=20, r=20, t=40, b=20),
-        plot_bgcolor="#ffffff",
-        paper_bgcolor="#f8f9fa",
-        font=dict(size=14, color="#212121"),
-        title_font=dict(size=18, color="#0d47a1", family="Arial Black"),
-        xaxis=dict(showgrid=True, gridcolor="#e0e0e0"),
-        yaxis=dict(showgrid=True, gridcolor="#e0e0e0")
-    )
-    st.plotly_chart(fig, use_container_width=True)
-
-except Exception as e:
-    st.warning(f"Não foi possível gerar o gráfico de simulação: {e}")
