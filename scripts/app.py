@@ -9,11 +9,30 @@ import os
 import importlib
 
 # Verificação segura do SHAP
-shap_spec = importlib.util.find_spec("shap")
-if shap_spec is not None:
-    import shap
+shap_spec = importlib.util.find_spec("shap") 
+
+# if shap_spec is not None:
+    # import shap
+# else:
+   #  shap = None
+
+if shap is not None:
+    try:
+        # aplica o pré-processamento
+        X_transformed = pipeline.named_steps['preprocessor'].transform(input_df)
+        model = pipeline.named_steps['regressor']
+
+        explainer = shap.Explainer(model, X_transformed)
+        shap_values = explainer(X_transformed)
+
+        st.set_option('deprecation.showPyplotGlobalUse', False)
+        shap.summary_plot(shap_values, X_transformed, plot_type="bar")
+        st.pyplot(plt.gcf())
+    except Exception as e:
+        st.warning(f"Não foi possível gerar explicabilidade SHAP: {e}")
 else:
-    shap = None
+    st.info("📌 SHAP não está instalado neste ambiente. Adicione `shap` ao requirements.txt para habilitar explicabilidade.")
+
 
 # Configuração da página
 st.set_page_config(
