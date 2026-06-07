@@ -7,7 +7,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import os
 import importlib
-import shap
+
 
 # Verificação segura do SHAP
 shap_spec = importlib.util.find_spec("shap")
