@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 import os
 import importlib
 
-
 # Verificação segura do SHAP
 shap_spec = importlib.util.find_spec("shap")
 if shap_spec is not None:
@@ -167,11 +166,11 @@ if shap is not None:
         shap_values = explainer(input_df)
         st.set_option('deprecation.showPyplotGlobalUse', False)
         shap.summary_plot(shap_values, input_df, plot_type="bar")
-        st.pyplot(bbox_inches='tight')
+        st.pyplot(plt.gcf())  # garante que o gráfico atual seja exibido
     except Exception as e:
         st.warning(f"Não foi possível gerar explicabilidade SHAP: {e}")
 else:
-    st.info("📌 SHAP não está instalado neste ambiente. Instale `shap` para habilitar explicabilidade.")
+    st.info("📌 SHAP não está instalado neste ambiente. Adicione `shap` ao requirements.txt para habilitar explicabilidade.")
 
 # --- Simulação de Clima vs Atraso ---
 st.markdown("## 🌦️ Simulação de Impacto Climático")
@@ -192,16 +191,4 @@ try:
         title="Impacto da Chuva no Cronograma",
         color_discrete_sequence=["#2196F3"]
     )
-    fig.update_layout(
-        margin=dict(l=20, r=20, t=40, b=20),
-        plot_bgcolor="#ffffff",
-        paper_bgcolor="#f8f9fa",
-        font=dict(size=14, color="#212121"),
-        title_font=dict(size=18, color="#0d47a1", family="Arial Black"),
-        xaxis=dict(showgrid=True, gridcolor="#e0e0e0"),
-        yaxis=dict(showgrid=True, gridcolor="#e0e0e0")
-    )
-    st.plotly_chart(fig, use_container_width=True)
-
-except Exception as e:
-    st.warning(f"Não foi possível gerar o gráfico de simulação: {e}") 
+    fig
