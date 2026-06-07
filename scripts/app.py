@@ -10,12 +10,6 @@ import importlib
 
 # Verificação segura do SHAP
 shap_spec = importlib.util.find_spec("shap") 
-
-# if shap_spec is not None:
-    # import shap
-# else:
-   #  shap = None
-
 if shap is not None:
     try:
         # aplica o pré-processamento
