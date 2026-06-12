@@ -293,7 +293,7 @@ analiseRiscosAtrasoObras/
 └── README.md
 ```
 
----
+--- 
    
 **Autor:** Sérgio Santos — Cientista de Dados | Ambientes Críticos e Governança de Dados
 
