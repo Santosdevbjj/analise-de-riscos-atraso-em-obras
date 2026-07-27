@@ -1,10 +1,13 @@
-Aqui está a tradução completa e precisa do seu `README.md` para o inglês, mantendo a formatação, badges, emojis, código e a estrutura original do documento:
+# 🏗️ Construction Delay Risk Prediction
 
----
+<p align="center">
+  <img src="assets/CCbjj-predicao-riscos.png" alt="Construction Delay Risk Prediction" width="600"/>
+</p>
 
-# # 🏗️ Construction Delay Risk Prediction
+### CCbjj Engineering & Risk Intelligence — Operational Analytics Platform
 
-### CCbjj Engineering & Risk Intelligence — Operational Analysis Platform
+[![Streamlit App](https://img.shields.io/badge/Simulator-Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://predicaoriscos.streamlit.app)
+[![Telegram Bot](https://img.shields.io/badge/Bot-Telegram-26A5E4?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/CCbjj_risk_bot)
 
 > *Discipline, strategy, and data applied to civil engineering.*
 
@@ -12,191 +15,189 @@ Aqui está a tradução completa e precisa do seu `README.md` para o inglês, ma
 
 ## 1. Business Problem
 
-Civil construction companies suffer silent revenue losses. Every project delivered past its deadline incurs contractual fines, forced rescheduling, and customer dissatisfaction — worst of all, most of these delays were predictable.
+Construction companies quietly lose revenue. Every project delivered behind schedule generates contractual penalties, forced re-planning, and client frustration — and the worst part: most of these delays were predictable.
 
-The issue was not a lack of data, but a **lack of analytical data utilization.** Project histories, supplier ratings, weather data, and soil types were recorded, yet no one leveraged them to anticipate risk. Decisions were made reactively — only after delays had already occurred.
+The problem wasn't a lack of data. It was **a lack of analytical use of existing data.** Project histories, supplier ratings, weather data, and soil type were all recorded, but no one used them to anticipate risk. Decisions were made reactively — only after the delay had already happened.
 
-**The core question of this project is:**
-
-> *Which construction projects present the highest delay risk, and where must we intervene before the financial impact materializes?*
+**The central question of this project is:**
+> *Which projects carry the highest risk of delay, and where should we act before the financial impact materializes?*
 
 ---
 
 ## 2. Context
 
-Civil engineering operations involve interdependent variables that, combined, determine whether a project will be delivered on time:
+Civil construction operations involve interdependent variables that, combined, determine whether a delivery will happen on time or not:
 
-* **Weather conditions** in the project site area (accumulated rainfall level)
-* **Soil type and quality** (clay, sand, rock, silt)
-* **Historical supplier ratings** — the single most impactful factor in the model
-* **Construction stage** (foundation, structure, finishing) and its sensitivity to each variable
-* **Budget and complexity** of the project
+- **Weather conditions** at the project site (accumulated rainfall level)
+- **Soil type and quality** (clay, sandy, rocky, silty)
+- **Historical supplier rating** — the factor with the greatest isolated impact on the model
+- **Construction stage** (foundation, structure, finishing) and its sensitivity to each variable
+- **Budget and project complexity**
 
-This project was built using **synthetic data generated with realistic industry distributions**, simulating 200 construction projects across 10 Brazilian cities over 24 months of operational history — applying a methodology and tech stack equivalent to real production environments.
+The project was developed using **synthetic data generated with realistic industry distributions**, simulating 200 projects across 10 Brazilian cities over 24 months of operational history — applying methodology and a tech stack equivalent to real production environments.
 
-The deliverable is not just a model. It is a **production-ready data platform**: a Telegram bot that any site manager can query on their phone, and a Streamlit simulator for real-time executive decision-making.
+The deliverable is not just a model. It's a **data platform in production**: a Telegram bot that any project manager can consult from their phone, and a Streamlit simulator for real-time executive analysis.
 
 ---
 
 ## 3. Analysis Assumptions
 
-* The dataset is **synthetic**, generated using civil construction business rules (`scripts/gerar_dados.py`), with a fixed random seed (`numpy.random.seed(42)`) to ensure full reproducibility.
-* The **target variable** is `dias_atraso` (delay days) — a continuous regression problem, not binary classification.
-* Suppliers with a `rating_confiabilidade < 2.5` were classified as **high risk**, incurring a baseline delay penalty of +6 days during data generation.
-* Foundation stage projects on clay soil received an additional penalty of +5.5 days — a rule derived from a civil engineering hypothesis validated during EDA.
-* Records with `dias_atraso > 3 standard deviations` were removed as extreme outliers prior to model training.
-* The simulated period covers 24 operational months; long-term seasonalities were not modeled in this release.
+- The dataset is **synthetic**, generated with construction-industry business rules (`scripts/gerar_dados.py`), with a fixed seed (`numpy.random.seed(42)`) to guarantee full reproducibility.
+- The **target variable** is `dias_atraso` (days delayed) — a continuous regression problem, not binary classification.
+- Suppliers with `rating_confiabilidade < 2.5` (reliability rating) were treated as **high risk**, with a penalty of +6 days added to the base delay during data generation.
+- Foundation work on clay soil receives an additional penalty of +5.5 days — a rule derived from a civil engineering hypothesis validated during EDA.
+- Records with `dias_atraso > 3 standard deviations` were removed as extreme outliers before training.
+- The simulated period covers 24 months of operation; long-term seasonality was not modeled in this version.
 
 ---
 
 ## 4. Solution Strategy
 
-The project followed the complete Data Science framework, from problem definition to production deployment:
+The project followed the full Data Science framework, from problem to production product:
 
-| Step | Description |
-| --- | --- |
-| **1. Business Problem** | Definition of the financial cost per delay day and model success criteria |
-| **2. Data Generation & Architecture** | Synthetic dataset built with engineering rules; structured in layered architecture: `raw → analytics → products` |
-| **3. Data Cleaning & Preprocessing** | Median imputation for weather variables; removal of extreme outliers in `dias_atraso` |
-| **4. Hypothesis-Driven EDA** | Validation of 4 business hypotheses regarding delay root causes |
-| **5. Feature Engineering** | Creation of a composite risk index: `supplier_rating × weather_condition` |
-| **6. Machine Learning Preparation** | One-Hot Encoding for categorical variables; StandardScaler for continuous numerical features |
-| **7. Training & Evaluation** | RandomForestRegressor with cross-validation; benchmarked against a historical mean baseline |
-| **8. Business Performance** | Translation of technical MAE into estimated monetary financial impact (R$) |
-| **9. Deployment** | Telegram Bot (Render) + Streamlit Simulator + Layered Database Architecture (Supabase) |
+| Stage | Description |
+|---|---|
+| **1. Business problem** | Defining the real cost of each day of delay and the model's success criteria |
+| **2. Data generation and architecture** | Synthetic dataset with engineering rules; organized in layers: `raw → analytics → products` |
+| **3. Cleaning and processing** | Median imputation for weather variables; removal of extreme outliers in `dias_atraso` |
+| **4. Hypothesis-driven EDA** | Validation of 4 business hypotheses about delay causes |
+| **5. Feature engineering** | Creation of a composite risk index: `supplier_rating × weather_condition` |
+| **6. ML preparation** | One-Hot Encoding for categorical variables; StandardScaler for continuous numerical variables |
+| **7. Training and evaluation** | RandomForestRegressor with cross-validation; comparison against a historical-average baseline |
+| **8. Business Performance** | Converting the technical MAE into estimated financial impact in R$ |
+| **9. Deploy** | Telegram bot (Render) + Streamlit simulator + layered database (Supabase) |
 
 ---
 
 ## 5. Data Cleaning and Preparation
 
-* **Median Imputation** applied to missing values in weather variables — selected over the mean due to its robustness against extreme rainfall outliers.
-* **Outlier Removal** in `dias_atraso` for values exceeding 3 standard deviations — atypical events that would distort model training without representing standard operations.
-* **One-Hot Encoding** applied to categorical features: `tipo_solo` (soil type), `etapa` (stage), `cidade` (city), and `material`.
-* **StandardScaler** applied to continuous numeric features: `orcamento_estimado` (estimated budget), `complexidade_obra` (complexity), `nivel_chuva` (rainfall level), `rating_confiabilidade` (reliability rating), and `taxa_insucesso_fornecedor` (supplier failure rate).
-* **Composite Feature Creation:** `indice_risco = rating_fornecedor × nivel_chuva` — captures the amplifying impact of weather conditions on already underperforming suppliers.
+- **Median imputation** for weather variables with missing values — chosen over the mean for its robustness to extreme rainfall outliers.
+- **Outlier removal** in `dias_atraso` above 3 standard deviations — atypical events that would distort the model's learning without representing the real operational pattern.
+- **One-Hot Encoding** applied to categorical variables: `tipo_solo` (soil type), `etapa` (stage), `cidade` (city), and `material`.
+- **StandardScaler** applied to continuous numerical variables: `orcamento_estimado` (estimated budget), `complexidade_obra` (project complexity), `nivel_chuva` (rainfall level), `rating_confiabilidade` (reliability rating), and `taxa_insucesso_fornecedor` (supplier failure rate).
+- **Composite feature created:** `indice_risco = rating_fornecedor × nivel_chuva` — captures the amplifying effect of weather on already-problematic suppliers.
 
 ---
 
-## 6. Exploratory Data Analysis — Hypothesis Testing
+## 6. Exploratory Analysis — Hypothesis Validation
 
-The EDA was focused on **validating business hypotheses**, rather than simple visualization. Each hypothesis was tested prior to feature integration:
+The EDA was driven by **business hypothesis validation**, not just visualization. Each hypothesis was tested before being inserted as a feature into the model:
 
-| Hypothesis | Result | Model Impact |
-| --- | --- | --- |
-| Is weather the main cause of delays? | ❌ False — Supplier rating has ~3x higher impact during finishing stages | Weather retained as a feature, but assigned lower relative weight than suppliers |
-| Do low-rated suppliers cause delays even in good weather? | ✅ Confirmed | `rating_confiabilidade` became the model's most critical feature |
-| Do higher-budget projects carry higher delay risk? | ✅ Projects over R$ 2M show higher sensitivity to cumulative delays | `orcamento_estimado` and `complexidade_obra` included as features |
-| Is weather an isolated root cause? | ❌ Acts as an aggravating factor, rarely as the sole cause | Led to the creation of the composite index `rating × weather` |
+| Hypothesis | Result | Impact on the Model |
+|---|---|---|
+| Is weather the main cause of delay? | ❌ False — supplier rating has ~3x greater impact during finishing stages | Weather kept as a feature, but with lower relative weight than supplier rating |
+| Do low-rated suppliers delay projects even in good weather? | ✅ Confirmed | `rating_confiabilidade` became the model's most important feature |
+| Do higher-budget projects carry more risk? | ✅ Projects above R$ 2M show greater sensitivity to accumulated delays | `orcamento_estimado` and `complexidade_obra` included as features |
+| Is weather an isolated root cause? | ❌ It acts as an aggravating factor, rarely as the main cause | Creation of the composite index `rating × weather` |
 
-**Action recommended by the model:**
-
-> Prioritize renegotiating or replacing suppliers with ratings below 3.0 **before** taking action on weather or logistics-related interventions.
+**Model-recommended action:**
+> Prioritize renegotiating or replacing suppliers with a rating below 3.0 **before** any intervention related to weather or logistics.
 
 ---
 
 ## 7. Model Training and Performance
 
-**Selected Algorithm:** `RandomForestRegressor` — scikit-learn
+**Algorithm chosen:** `RandomForestRegressor` — scikit-learn
 
 **Why Random Forest instead of XGBoost?**
-Random Forest was selected due to its superior interpretability via `feature_importances_` — essential when presenting model results to non-technical construction stakeholders. XGBoost was evaluated and yielded a marginal ~2% improvement in MAE at a significant cost to explainability.
+Random Forest was chosen for its better interpretability via `feature_importances_` — essential for presenting the model to non-technical construction stakeholders. XGBoost was evaluated and showed a marginal ~2% gain in MAE at a significant cost to explainability.
 
-| Metric | Baseline (Historical Mean) | Trained Model | Improvement |
-| --- | --- | --- | --- |
+| Metric | Baseline (historical average) | Trained Model | Change |
+|---|---|---|---|
 | MAE | 12.0 days | **4.97 days** | **-59%** |
 | RMSE | — | 6.3 days | — |
 | R² | — | 0.41 | — |
 
-**Regarding R² = 0.41:**
-In civil construction, uncontrolled external variables — human decisions, supply chain volatility, extreme weather — are inherent to the operational domain. An R² above 0.4 represents a solid outcome in this environment. The key operational metric is achieving a **MAE below 5 days**, which was successfully hit.
+**On R² = 0.41:**
+In civil construction scenarios, uncontrolled external variables — human decisions, supply chains, extreme weather events — are inherent to the problem. An R² above 0.4 is a solid result in this context. The relevant business metric is the **MAE below 5 days**, which was achieved.
 
 ---
 
 ## 8. Financial Impact (Business Performance)
 
-> Each day of delay incurs approximately **R$ 1,380** in contractual fines (estimated average cost for the scale of simulated projects).
+> Each day of delay represents approximately **R$ 1,380** in contractual penalties (average estimated cost for the size of the simulated projects).
 
-| Metric / Indicator | Result |
-| --- | --- |
-| Forecast Uncertainty Reduction | **~60%** |
-| Residual Financial Risk per Project (MAE × Daily Cost) | **≈ R$ 6,860** |
-| Estimated Potential Savings (Annual Portfolio) | **≈ R$ 248,400/year** |
-| Decision Type Generated | **Preventive** — before financial loss occurs |
+| Indicator | Result |
+|---|---|
+| Reduction in forecast uncertainty | **~60%** |
+| Residual financial risk per project (MAE × cost/day) | **≈ R$ 6,860** |
+| Estimated potential savings (annual portfolio) | **≈ R$ 248,400/year** |
+| Type of decision generated | **Preventive** — before the impact occurs |
 
-The primary objective is not merely predicting delays, but empowering the business to **act before costs materialize** — transforming a reactive operational problem into a strategic advantage.
+The project's focus isn't just predicting delays. It's enabling the company to **act before the cost materializes** — turning a reactive problem into an operational advantage.
 
 ---
 
 ## 9. Product in Production
 
 ### 🤖 Telegram Bot
+Any project manager can check their project's risk directly from their phone, with no technical background and no system login required:
 
-Field managers can query project delay risks directly from their mobile phones, with no technical skills or system logins required:
-
-1. Start interaction with `/start`
-2. Select preferred language (**Portuguese** or **English**)
-3. Select data source (**Local CSV** or **Supabase Cloud**)
-4. Enter the Project ID (e.g., `CCBJJ-100`)
-5. Instantly receive: **Risk Status + Explanatory Chart + Executive PDF Report**
+1. Start with `/start`
+2. Select language (**Portuguese** or **English**)
+3. Select the data source (**local CSV** or **Supabase Cloud**)
+4. Enter the project ID (e.g., `CCBJJ-100`)
+5. Instantly receive: **risk status + explanatory chart + corporate PDF report**
 
 ### 📊 Streamlit Simulator
+Executive interface for real-time sensitivity analysis:
 
-Executive dashboard interface for real-time sensitivity analysis:
-
-* Interactive parameter adjustments via sidebar (city, stage, soil type, critical input material, rainfall level, supplier rating)
-* Real-time visualization of **Estimated Delay** with clear risk tiers (🟢 Stable / 🟡 Alert / 🔴 Critical)
-* Interactive chart for **Rainfall vs. Delay Simulation** (continuous curve)
-* Interactive chart for **Geological Impact Analysis** (bar comparisons by soil type)
-* Real-time calculation of **Opportunity Costs**
+- Parameter adjustment via side panel (city, stage, soil type, critical material, rainfall level, supplier rating)
+- Visualization of **estimated delay** with risk classification (🟢 Stable / 🟡 Alert / 🔴 Critical)
+- **Rainfall vs. delay simulation** chart (continuous curve)
+- **Impact by geology** chart (comparative bars by soil type)
+- Real-time **opportunity cost** estimate
 
 # 🏗️ Construction Delay Risk Analysis
+
+[![Telegram Bot](https://img.shields.io/badge/Bot-Telegram-26A5E4?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/CCbjj_risk_bot)
+[![Streamlit App](https://img.shields.io/badge/Simulator-Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://xsczxui9hscbsfpucq38yu.streamlit.app)
 
 ### 🏛️ Data Architecture (Supabase)
 
 ```
-Supabase (Layered Database)
+Supabase (layered database)
 ├── raw
-│   ├── atividades_obra         # Historical activity logs per stage
-│   ├── fornecedores            # Supplier registry and performance ratings
-│   └── clima                   # Accumulated rainfall levels by project
+│   ├── atividades_obra          # Activity history by stage
+│   ├── fornecedores             # Supplier registry and ratings
+│   └── clima                   # Accumulated rainfall level per project
 ├── analytics
-│   └── dashboard_obras         # Consolidated fact table for analytics
+│   └── dashboard_obras          # Consolidated fact table for analysis
 └── products
-    └── base_consulta_bot       # Decoupled consumption layer (Bot + Streamlit)
-
+    └── base_consulta_bot        # Decoupled consumption layer (Bot + Streamlit)
 ```
 
-**Benefits of layered architecture:** Enhanced data governance and traceability, decoupled consumption from source data, and seamless scalability for future data products without impacting ingestion pipelines.
+**Benefits of the layered architecture:** data governance and traceability, consumption decoupled from the source, scalability for new data products without impacting the ingestion pipeline.
 
 ---
 
 ## 10. Technical Decisions
 
-| Decision | Choice | Evaluated Alternative | Rationale |
-| --- | --- | --- | --- |
-| Algorithm | Random Forest | XGBoost | Superior interpretability via `feature_importances_` for non-technical domain stakeholders |
-| Database | Supabase | Local PostgreSQL | Free deployment offering native REST APIs and layered storage capability |
-| Delivery Channel | Telegram Bot + Streamlit | BI Dashboard | Frictionless mobile access with no login required for site managers |
-| Cloud Infrastructure | Render | AWS Lambda | Zero cost for current scope; native `Procfile` support |
-| Data Source | Synthetic with Business Rules | Public Dataset | Enables full control over correlations and accurate testing of industry domain hypotheses |
+| Decision | Choice | Alternative Evaluated | Reason |
+|---|---|---|---|
+| Algorithm | Random Forest | XGBoost | Better interpretability via `feature_importances_` for non-technical stakeholders |
+| Database | Supabase | Local PostgreSQL | Free deploy with a native REST API and layered architecture |
+| User delivery | Telegram Bot + Streamlit | BI Dashboard | No-login accessibility for field managers, via mobile phone |
+| Cloud | Render | AWS Lambda | Zero cost for the project's scope; native `Procfile` |
+| Data | Synthetic with domain rules | Public dataset | Allows precise control of correlations and validation of business hypotheses |
 
-**Accepted Trade-off:** Synthetic data offers analytical control but limits generalization to real-world production environments. The system architecture was engineered to allow seamless substitution with real enterprise data pipelines without requiring code refactoring.
+**Trade-off accepted:** synthetic data ensures analytical control but limits generalization to real production environments. The architecture was designed for straightforward replacement with a real data source — without pipeline refactoring.
 
 ---
 
 ## 11. Technologies Used
 
-**Data Science & Machine Learning**
+**Data and Machine Learning**
 
 `Python 3.13` | `Pandas` | `NumPy` | `Scikit-learn` | `SciPy` | `Matplotlib` | `Seaborn` | `Plotly` | `Faker`
 
-**Infrastructure & Deployment**
+**Infrastructure and Deploy**
 
 `Supabase` | `Render` | `Docker` | `FastAPI` | `Uvicorn` | `SQLAlchemy` | `Alembic`
 
-**User Application Interfaces**
+**User Delivery**
 
-`Streamlit` | `Telegram Bot API (python-telegram-bot 21.0)` | `ReportLab` (PDF Generation)
+`Streamlit` | `Telegram Bot API (python-telegram-bot 21.0)` | `ReportLab` (PDF)
 
 **Utilities**
 
@@ -206,54 +207,53 @@ Supabase (Layered Database)
 
 ## 12. How to Run the Project
 
-**Prerequisites:** Python 3.10+, Git, Telegram Account (for Bot interaction)
+**Prerequisites:** Python 3.10+, Git, a Telegram account (for the bot)
 
 ```bash
 # 1. Clone the repository
 git clone https://github.com/Santosdevbjj/analiseRiscosAtrasoObras
 cd analiseRiscosAtrasoObras
 
-# 2. Install required dependencies
+# 2. Install dependencies
 pip install -r requirements.txt          # Streamlit + ML
 pip install -r requirements_api.txt      # FastAPI + Bot + Database
 
-# 3. Environment Variables Setup
-# Create a .env file in the root directory containing:
+# 3. Configure environment variables
+# Create a .env file at the project root with:
 # DATABASE_URL=your_supabase_url_here
-# TELEGRAM_TOKEN=your_telegram_bot_token_here
+# TELEGRAM_TOKEN=your_token_here
 
-# 4. Generate synthetic dataset
+# 4. Generate the synthetic data
 python scripts/gerar_dados.py
 
-# 5. Launch Telegram Bot
+# 5. Run the Telegram Bot
 python scripts/telegram_bot.py
 
-# 6. Launch Streamlit Simulator
+# 6. Run the Streamlit Simulator
 streamlit run app.py
-
 ```
 
-> **Offline Mode (Without Supabase):** The system fully supports execution using local CSV files. Select "📂 Local CSV Mode" upon initiating the Telegram bot or set `USE_CSV=true` in your `.env` configuration.
+> **Offline mode (without Supabase):** The project runs fully with a local CSV. Select "📂 Local CSV Mode" when starting the bot, or set `USE_CSV=true` in the `.env` file.
 
 ---
 
-## 13. Key Learnings & Insights
+## 13. Lessons Learned
 
-The primary challenge was **translating technical MAE metrics into defensible financial metrics for executive leadership.** Connecting a "4.97-day average error" to a "potential savings of R$ 248k/year" required rigorous mathematical modeling as well as clear storytelling to build operational trust.
+The biggest challenge was **translating the technical MAE into a financial impact that a board could defend.** It's not trivial to connect "an average error of 4.97 days" with "a potential savings of R$ 248k/year" in a way a non-technical manager trusts the number — and that required both calculation rigor and narrative clarity.
 
-Starting with the data before clearly articulating the business problem initially led to rework. Moving forward, defining problem scope, success criteria, and unit delay costs **prior** to opening a notebook is essential.
+I started with the data before precisely defining the business problem — and had to backtrack, which cost time and rework. Today I would structure the problem, the success criterion, and the unit cost of delay **before** opening any notebook.
 
-The most valued deliverable was not the machine learning model itself, but the **Telegram Bot and Streamlit Simulator** — making insights actionable for field decision-makers without technical barriers. A model usable only by a data scientist delivers limited business value.
+The most valued deliverable wasn't the model. It was the **bot and the simulator** — because they made the result accessible to whoever makes the decision, without depending on a technical background. A model only a data scientist can query generates no operational value.
 
 ---
 
-## 14. Next Steps & Roadmap
+## 14. Next Steps
 
-* [ ] **Integration with Live Weather APIs** (OpenWeatherMap) to replace simulated data with real-time precipitation metrics by postal code
-* [ ] **Data Drift Monitoring Implementation** with Evidently AI to monitor production data distribution shifts relative to training sets
-* [ ] **Prediction Logging & Auditing** for historical tracking and continuous model retraining pipelines
-* [ ] **Risk Classification Model Development** (High / Medium / Low) alongside regression for simplified alert notifications in the bot
-* [ ] **Enhanced Financial Impact Calculation** customized by contract types (Fixed Price vs. Time & Materials) and geographic regions
+- [ ] **Integration with a real weather API** (OpenWeatherMap) to replace simulated data with real rainfall data by project ZIP code
+- [ ] **Data drift monitoring** with Evidently AI — detect when production data distribution diverges from training data
+- [ ] **Prediction logging** for query history and continuous model retraining
+- [ ] **Risk classification model** (High / Medium / Low) as a complement to the regression — for simpler alerts in the bot
+- [ ] **Expansion of the financial impact calculation** by contract type (fixed price vs. cost-plus) and by region
 
 ---
 
@@ -263,33 +263,35 @@ The most valued deliverable was not the machine learning model itself, but the *
 analiseRiscosAtrasoObras/
 ├── data/
 │   ├── raw/
-│   │   ├── climaccbjj.csv                    # Weather records per project
-│   │   ├── atividadesccbjj.csv               # Activity logs and stage statuses
-│   │   ├── fornecedoresccbjj.csv             # Supplier database and ratings
-│   │   ├── obrasccbjj.csv                    # Project master data
-│   │   └── base_consulta_botccbjj.csv        # Consolidated lookup data for Bot & App
+│   │   ├── climaccbjj.csv                    # Weather data by project
+│   │   ├── atividadesccbjj.csv               # Activities and status by stage
+│   │   ├── fornecedoresccbjj.csv             # Supplier registry and ratings
+│   │   ├── obrasccbjj.csv                    # Project data
+│   │   └── base_consulta_botccbjj.csv        # Consolidated base for Bot and App
 │   └── processed/
-│       └── df_mestre_consolidado.csv.gz      # Preprocessed and compressed master dataset
+│       └── df_mestre_consolidado.csv.gz      # Cleaned and compressed dataset
 ├── models/
-│   ├── pipeline_random_forest.pkl            # Serialized trained model pipeline
-│   └── features_metadata.joblib              # Feature ordering mapping for inference
+│   ├── pipeline_random_forest.pkl            # Serialized trained model
+│   └── features_metadata.joblib             # Feature order for inference
 ├── scripts/
-│   ├── app.py                                # Streamlit Simulator (Executive Interface)
-│   ├── gerar_dados.py                        # Synthetic dataset generator script
-│   ├── telegram_bot.py                       # Telegram Bot script (Render Deployment)
-│   ├── handlers.py                           # Bot command request handlers
-│   ├── database.py                           # Postgres/SQLite database abstraction layer
-│   └── i18n.py                               # PT/EN Internationalization module
-├── notebooks/                                # EDA & Model Training Notebooks
-├── requirements.txt                          # Streamlit + ML dependencies
-├── requirements_api.txt                      # FastAPI + Bot + Database dependencies
-├── requirements_streamlit.txt                # Streamlit Cloud deployment requirements
-├── runtime.txt                               # python-3.13.4
-├── Procfile                                  # web: python scripts/telegram_bot.py
+│   ├── app.py                               # Streamlit simulator (executive interface)
+│   ├── gerar_dados.py                       # Synthetic dataset generation
+│   ├── telegram_bot.py                      # Telegram bot (deployed on Render)
+│   ├── handlers.py                          # Bot command handlers
+│   ├── database.py                          # Postgres/SQLite abstraction (Supabase)
+│   └── i18n.py                              # PT/EN internationalization
+├── notebooks/                               # Exploratory analysis and training
+├── requirements.txt                         # Streamlit + ML
+├── requirements_api.txt                     # FastAPI + Bot + Database
+├── requirements_streamlit.txt               # Streamlit Cloud deploy
+├── runtime.txt                              # python-3.13.4
+├── Procfile                                 # web: python scripts/telegram_bot.py
 └── README.md
-
 ```
 
 ---
 
-**Author:** Sérgio Santos — Data Scientist | Critical Environments & Data Governance
+**Author:** Sérgio Santos — Data Scientist | Mission-Critical Environments and Data Governance
+
+[![Sérgio Santos Portfolio](https://img.shields.io/badge/Portfolio-Sérgio_Santos-111827?style=for-the-badge&logo=githubpages&logoColor=00eaff)](https://portfoliosantossergio.vercel.app)
+[![Sérgio Santos LinkedIn](https://img.shields.io/badge/LinkedIn-Sérgio_Santos-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white)](https://linkedin.com/in/santossergioluiz)
